@@ -43,14 +43,14 @@ class GBPUSD(Currency):
 
 
 class Stock(Asset):
-    def __init__(self,data,short_name,spread=1e-4,commissions=0,lot_units=1,*args,**kwargs):
-        super().__init__(data=data,spread=spread,commissions=commissions,lot_units=lot_units,type='Stock',name='Base',*args,**kwargs)
+    def __init__(self,data,short_name,spread=1e-4,commissions=0,lot_units=1,type='Stock',name='Base',*args,**kwargs):
+        super().__init__(data=data,spread=spread,commissions=commissions,lot_units=lot_units,type=type,name=name,*args,**kwargs)
         self.data = data
         self.short_name = short_name
 
 class AAPL(Stock):
     def __init__(self,*args,**kwargs):
-        super().__init__(type='Stock',name='AAPL',*args,**kwargs)
+        super().__init__(type='Stock',name='Apple',short_name='AAPL',*args,**kwargs)
 
 
 class ETF:
