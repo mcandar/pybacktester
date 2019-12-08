@@ -1,5 +1,4 @@
 from strategy_tester.account import Account
-from strategy_tester.order import Order
 from strategy_tester.strategy import Strategy
 from strategy_tester.risk_management import ConstantRate
 from strategy_tester.simulate import BackTest

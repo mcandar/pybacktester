@@ -1,7 +1,7 @@
 from datetime import datetime as dt
 
 class Order:
-    """Order object for keeping track of an order, setting TP, SL levels and store history. One can
+    """Keep track of an order, set TP, SL levels and store history. One can
     use this class to act on it."""
     def __init__(self,position,type,size,strike_price,timestamp,spread=0.00010,leverage=100,
                  stop_loss=None,take_profit=None,trailing_stop_loss=None,
@@ -45,7 +45,7 @@ class Order:
         self.time_ticker['closed'] = timestamp
         return self
     
-    def check_pending_open(self,spot_price,timestamp,slippage=0):
+    def pending_open(self,spot_price,timestamp,slippage=0):
         "Open a pending order."
         if self.is_active and not self.is_open:
             d = self.strike_price - spot_price
@@ -53,6 +53,8 @@ class Order:
                 self.is_open = True
                 self.time['opened'] = dt.utcnow()
                 self.time_ticker['opened'] = timestamp
+                return True
+        return False
 
     def check_close(self,spot_price,timestamp):
         "Runs at each tick."
@@ -85,8 +87,7 @@ class Order:
             self.check_close(spot_price,timestamp)
             return True
         elif self.is_active and not self.is_open:
-            self.check_pending_open(spot_price,timestamp)
-            return True
+            return self.pending_open(spot_price,timestamp)
         else:
             print('Cannot update an expired order.')
             return False

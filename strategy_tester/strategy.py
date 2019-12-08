@@ -10,6 +10,7 @@ class Strategy:
         self.RiskManagement = RiskManagement
         self.id = id
         self.name = name
+        self.on = []
     
     def __include_identifiers(self,args):
         args['strategy_id'] = self.id
@@ -18,6 +19,10 @@ class Strategy:
     
     def __random_decision(self,p=0.01):
         return np.random.uniform(0,1,1)[0] < p
+    
+    def check_registered_assets(self):
+        if len(self.on) == 0:
+            raise AttributeError('No asset is registered. Set a target instrument to `on` to use this strategy.')
     
     # TO DO: bring preprocessing back to life
     def preprocess(self,spot_price,timestamp,Account,RiskManagement,exog=None):
@@ -58,7 +63,7 @@ class Strategy:
     
     def short_open(self,spot_price,timestamp,Account,exog=None):
         if exog is not None:
-            exog = self.preprocess()
+            exog = self.preprocess() # TO DO: supply correct function arguments
         decision, args = self.__short_open(spot_price=spot_price,
                                            Account=Account,
                                            timestamp=timestamp,

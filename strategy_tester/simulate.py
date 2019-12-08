@@ -59,43 +59,63 @@ class BackTest:
         elif order.position == 'short':
             return Strategy.short_modify(order=order,spot_price=spot_price,Account=Account,exog=exog)
 
-    def run(self,data,exog=None):
-        if not isinstance(data[0,1],(int,float)):
-            raise ValueError('Second column of data must be price series.')
+    # TO DO: divide into multiple functions
+    def run(self,assets,exog=None):
+        assets = assets if isinstance(assets,(list,tuple)) else [assets]
+        self.num_assets = len(assets)
+        lengths = []
+        for asset in assets:
+            lengths.append(asset.data.shape[0])
+            if not isinstance(asset.data[0,1],(int,float)):
+                raise ValueError(f'Second column of data must be price series, error received on {asset.id}')
+
+        lengths = np.array(lengths)
+        if np.any(lengths[0] != lengths):
+            raise ValueError('Time series data lengths must match.')
+        for s in self.__Strategies.values():
+            s.check_registered_assets()
+        
+        self.assets_keymap = {key:val for val,key in enumerate(map(lambda x: x.id,assets))}
+
+        data = np.array([asset.data[:,1] for asset in assets]).T
+        ts = asset.data[:,0]
         exog = np.repeat(None,data.shape[0]) if exog is None else exog
+
         _i = 0
         bar = ProgressBar(maxval = data.shape[0]).start()
-        for ticker,x in zip(data,exog):
-            if self.Account.is_blown:
-                print('No remaining balance.')
-                break
+        for t,d,x in zip(ts.tolist(),data.tolist(),exog):
+            for dd in d:
+                ticker = (t,dd)
+                if self.Account.is_blown:
+                    print('No remaining balance.')
+                    break
 
-            self.Account.update(spot_price=ticker[1],timestamp=ticker[0])
+                self.Account.update(spot_price=ticker[1],timestamp=ticker[0])
 
-            order_ids = self.Account.active_orders.keys()
-            if self.Account.n_active_orders > 0:
-                order_close_ids = []
-                for id in order_ids:
-                    tmp_order = self.Account.active_orders[id]
-                    tmp_strategy = self.__Strategies[tmp_order.strategy_id]
-                    self.Account.active_orders[id] = self.order_modify(order=tmp_order,
-                                                                       Strategy=tmp_strategy,
-                                                                       spot_price=ticker[1],
-                                                                       Account=self.Account,
-                                                                       exog=x)
+                order_ids = self.Account.active_orders.keys()
+                if self.Account.n_active_orders > 0:
+                    order_close_ids = []
+                    for id in order_ids:
+                        tmp_order = self.Account.active_orders[id]
+                        tmp_strategy = self.__Strategies[tmp_order.strategy_id]
+                        self.Account.active_orders[id] = self.order_modify(order=tmp_order,
+                                                                        Strategy=tmp_strategy,
+                                                                        spot_price=ticker[1],
+                                                                        Account=self.Account,
+                                                                        exog=x)
 
-                    if self.check_order_close(order=tmp_order,
-                                              spot_price=ticker[1],
-                                              Strategy=tmp_strategy,
-                                              exog=x):
-                        order_close_ids.append(id)
-                
-                self.Account.close_all_orders(order_close_ids)
-            for Strategy in self.__Strategies.values():
-                self.check_order_open(spot_price=ticker[1],
-                                      timestamp=ticker[0],
-                                      Strategy=Strategy,
-                                      exog=x)
+                        if self.check_order_close(order=tmp_order,
+                                                spot_price=ticker[1],
+                                                Strategy=tmp_strategy,
+                                                exog=x):
+                            order_close_ids.append(id)
+                    
+                    self.Account.close_all_orders(order_close_ids)
+                for Strategy in self.__Strategies.values():
+                    self.check_order_open(spot_price=ticker[1],
+                                        timestamp=ticker[0],
+                                        Strategy=Strategy,
+                                        exog=x)
             _i += 1
             bar.update(_i)
         bar.finish()

@@ -36,6 +36,9 @@ class Account:
     def id(self):
         return self.__id
     
+    def reset(self):
+        self.__init__()
+    
     def place_order(self,order):
         if self.free_margin >= order.margin:
             self.free_margin -= order.margin

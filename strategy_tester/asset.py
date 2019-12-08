@@ -1,26 +1,56 @@
-class Currency:
-    def __init__(self,data,base,quote,spread=1e-4,commissions=0,lot_units=1000):
+from strategy_tester.utils import generate_id
+
+# TO DO: check all class arguments, rearrange, remove redundant arguments
+class Asset:
+    "Base financial instrument class to inherit all common properties."
+    def __init__(self,data,spread=1e-4,commissions=0,lot_units=1000,type='Main',name='Base'):
         self.data = data
-        self.base = base
-        self.quote = quote
         self.spread = spread
         self.commissions = commissions
         self.lot_units = lot_units
+        self.type = type
+        self.name = name
+        self.id = generate_id(prefix=self.name,digits=4,timestamp=False)
+        self.registered = []
+        self.n_registered = 0
+    
+    def reset(self):
+        self.__init__()
+
+    def register(self,*strategies):
+        n = len(strategies)
+        self.n_registered += n
+        for strategy in strategies:
+            strategy.on.append(self.id)
+            self.registered.append(strategy.id)
+        return strategies if n > 1 else strategies[0]
+
+
+class Currency(Asset):
+    "Currency class."
+    def __init__(self,data,base,quote,spread=1e-4,commissions=0,lot_units=1000,type='Currency',name='Base',*args,**kwargs):
+        super().__init__(data=data,spread=spread,commissions=commissions,lot_units=lot_units,type=type,name=name,*args,**kwargs)
+        self.base = base
+        self.quote = quote
     
 class EURUSD(Currency):
     def __init__(self,*args,**kwargs):
-        super().__init__(base='EUR',quote='USD',*args,**kwargs)
+        super().__init__(base='EUR',quote='USD',type='Currency',name='EURUSD',*args,**kwargs)
 
 class GBPUSD(Currency):
     def __init__(self,*args,**kwargs):
-        super().__init__(base='GBP',quote='USD',*args,**kwargs)
+        super().__init__(base='GBP',quote='USD',type='Currency',name='GBPUSD',*args,**kwargs)
 
 
-class Stock:
-    def __init__(self,data,short_name,lot_units=1):
+class Stock(Asset):
+    def __init__(self,data,short_name,spread=1e-4,commissions=0,lot_units=1,*args,**kwargs):
+        super().__init__(data=data,spread=spread,commissions=commissions,lot_units=lot_units,type='Stock',name='Base',*args,**kwargs)
         self.data = data
         self.short_name = short_name
-        self.lot_units = lot_units
+
+class AAPL(Stock):
+    def __init__(self,*args,**kwargs):
+        super().__init__(type='Stock',name='AAPL',*args,**kwargs)
 
 
 class ETF:
@@ -31,3 +61,13 @@ class ETF:
 class Option:
     def __init__(self):
         pass
+
+
+class Portfolio:
+    def __init__(self):
+        pass
+
+
+class Market:
+    def __init__(self):
+        self._info = 'dummy'
