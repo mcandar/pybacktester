@@ -5,8 +5,8 @@ from strategy_tester.risk_management import ConstantRate, KellyCriterion
 from strategy_tester.simulate import BackTest
 from strategy_tester.utils import generate_data
 
-account    = Account(balance=1000)
 eurusd     = EURUSD(generate_data(100000).values)
+account    = Account(balance=1000)
 strategy_1 = Strategy(RiskManagement=ConstantRate(0.05),
                       id=23030,
                       name='noise_trader_1')

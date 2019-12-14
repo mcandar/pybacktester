@@ -14,8 +14,8 @@ risk_man = ConstantRate(0.1)
 
 strategy_1 = Strategy(RiskManagement=risk_man,id=23030,name='noise_trader')
 strategy_2 = Strategy(RiskManagement=risk_man,id=23031,name='noise_trader2')
-strategy = eurusd.register(strategy_1,strategy_2)
-strategy = gbpusd.register(strategy_1)
+strategy_1,strategy_2 = eurusd.register(strategy_1,strategy_2)
+strategy_1 = gbpusd.register(strategy_1)
 
 sim      = BackTest(account,[strategy_1,strategy_2]).run(assets=(eurusd,gbpusd))
 print(sim.Account.balances)

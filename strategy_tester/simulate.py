@@ -2,6 +2,7 @@ import numpy as np
 from progressbar import ProgressBar
 from strategy_tester.order import Order
 
+# TO DO: more than one orders at a time!!!!!!!!
 # TO DO: Make also time-driven
 # TO DO: Enable parallel computation
 # TO DO: bring oninit and ondeinit back to life later
@@ -23,33 +24,42 @@ class BackTest:
         self.oninit = oninit
         self.ondeinit = ondeinit
     
-    def check_order_open(self,spot_price,timestamp,Strategy,exog=None):
-        open_long, kwargs_long = Strategy.long_open(spot_price=spot_price,
-                                                    timestamp=timestamp,
-                                                    Account=self.Account,
-                                                    exog=exog)
-        open_short, kwargs_short = Strategy.short_open(spot_price=spot_price,
-                                                       timestamp=timestamp,
-                                                       Account=self.Account,
-                                                       exog=exog)
-        
-        if open_long:
-            order = Order(position='long',timestamp=timestamp,spread=self.spread,**kwargs_long)
-            self.Account.place_order(order)
-        elif open_short:
-            order = Order(position='short',timestamp=timestamp,spread=self.spread,**kwargs_short)
-            self.Account.place_order(order)
+    def __check_long_open(self,spot_price,timestamp,Strategy,exog=None):
+        args = Strategy.long_open(spot_price=spot_price,
+                                    timestamp=timestamp,
+                                    Account=self.Account,
+                                    exog=exog)
+
+        for aid, arg in args.items():
+            if arg['decision']:
+                order = Order(asset=aid,position='long',timestamp=timestamp,spread=self.spread,**arg['params'])
+                self.Account.place_order(order)
         return self
+            
+    def __check_short_open(self,spot_price,timestamp,Strategy,exog=None):
+        args = Strategy.short_open(spot_price=spot_price,
+                                    timestamp=timestamp,
+                                    Account=self.Account,
+                                    exog=exog)
+        
+        for aid, arg in args.items():
+            if arg['decision']:
+                order = Order(asset=aid,position='short',timestamp=timestamp,spread=self.spread,**arg['params'])
+                self.Account.place_order(order)
+        return self
+
+    def check_order_open(self,*args,**kwargs):
+        return self.__check_long_open(*args,**kwargs).__check_short_open(*args,**kwargs)
     
     def check_order_close(self,order,spot_price,Strategy,exog=None):
         if order.position == 'long':
             return Strategy.long_close(order=order,
-                                       spot_price=spot_price,
+                                       spot_price=spot_price[order.asset],
                                        Account=self.Account,
                                        exog=exog)
         elif order.position == 'short':
             return Strategy.short_close(order=order,
-                                        spot_price=spot_price,
+                                        spot_price=spot_price[order.asset],
                                         Account=self.Account,
                                         exog=exog)
     
@@ -58,6 +68,9 @@ class BackTest:
             return Strategy.long_modify(order=order,spot_price=spot_price,Account=Account,exog=exog)
         elif order.position == 'short':
             return Strategy.short_modify(order=order,spot_price=spot_price,Account=Account,exog=exog)
+    
+    # def process_ticker(self,ticker,x):
+    #     pass
 
     # TO DO: divide into multiple functions
     def run(self,assets,exog=None):
@@ -76,7 +89,6 @@ class BackTest:
             s.check_registered_assets()
         
         self.assets_keymap = {key:val for val,key in enumerate(map(lambda x: x.id,assets))}
-
         data = np.array([asset.data[:,1] for asset in assets]).T
         ts = asset.data[:,0]
         exog = np.repeat(None,data.shape[0]) if exog is None else exog
@@ -84,40 +96,42 @@ class BackTest:
         _i = 0
         bar = ProgressBar(maxval = data.shape[0]).start()
         for t,d,x in zip(ts.tolist(),data.tolist(),exog):
-            for dd in d:
-                ticker = (t,dd)
-                if self.Account.is_blown:
-                    print('No remaining balance.')
-                    break
+            ticker = (t,dict(zip(self.assets_keymap.keys(),d)))
 
-                self.Account.update(spot_price=ticker[1],timestamp=ticker[0])
+            if self.Account.is_blown:
+                print('No remaining balance.')
+                break
 
-                order_ids = self.Account.active_orders.keys()
-                if self.Account.n_active_orders > 0:
-                    order_close_ids = []
-                    for id in order_ids:
-                        tmp_order = self.Account.active_orders[id]
-                        tmp_strategy = self.__Strategies[tmp_order.strategy_id]
-                        self.Account.active_orders[id] = self.order_modify(order=tmp_order,
-                                                                        Strategy=tmp_strategy,
-                                                                        spot_price=ticker[1],
-                                                                        Account=self.Account,
-                                                                        exog=x)
+            self.Account.update(spot_price=ticker[1],timestamp=ticker[0])
 
-                        if self.check_order_close(order=tmp_order,
-                                                spot_price=ticker[1],
-                                                Strategy=tmp_strategy,
-                                                exog=x):
-                            order_close_ids.append(id)
-                    
-                    self.Account.close_all_orders(order_close_ids)
-                for Strategy in self.__Strategies.values():
-                    self.check_order_open(spot_price=ticker[1],
-                                        timestamp=ticker[0],
-                                        Strategy=Strategy,
-                                        exog=x)
+            order_ids = self.Account.active_orders.keys()
+            if self.Account.n_active_orders > 0:
+                order_close_ids = []
+                for id in order_ids:
+                    tmp_order = self.Account.active_orders[id]
+                    tmp_strategy = self.__Strategies[tmp_order.strategy_id]
+                    self.Account.active_orders[id] = self.order_modify(order=tmp_order,
+                                                                       Strategy=tmp_strategy,
+                                                                       spot_price=ticker[1],
+                                                                       Account=self.Account,
+                                                                       exog=x)
+
+                    if self.check_order_close(order=tmp_order,
+                                              spot_price=ticker[1],
+                                              Strategy=tmp_strategy,
+                                              exog=x):
+                        order_close_ids.append(id)
+                
+                self.Account.close_all_orders(order_close_ids)
+
+            for Strategy in self.__Strategies.values():
+                self.check_order_open(spot_price=ticker[1],
+                                      timestamp=ticker[0],
+                                      Strategy=Strategy,
+                                      exog=x)
             _i += 1
             bar.update(_i)
+        self.Account.cleanup()
         bar.finish()
         return self
 

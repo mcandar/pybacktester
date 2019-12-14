@@ -1,7 +1,7 @@
 import numpy as np
 
 # TO DO: create several built-in strategies
-# TO DO: edit this class to be a generic super class
+# TO DO: edit this class to be a generic super class (make inheritable)
 # TO DO: use a decorator to simplify methods?
 class Strategy:
     """Open, modify, and close orders. By modification, we could keep a 
@@ -12,63 +12,75 @@ class Strategy:
         self.name = name
         self.on = []
     
-    def __include_identifiers(self,args):
-        args['strategy_id'] = self.id
-        args['strategy_name'] = self.name
-        return args
-    
-    def __random_decision(self,p=0.01):
-        return np.random.uniform(0,1,1)[0] < p
-    
     def check_registered_assets(self):
         if len(self.on) == 0:
-            raise AttributeError('No asset is registered. Set a target instrument to `on` to use this strategy.')
+            raise AttributeError('No asset is registered. Set target instrument(s) to use this strategy.')
+
+    def include_identifiers(self,args):
+        assets = args.keys()
+        for aid in assets:
+            args[aid]['params']['strategy_id'] = self.id
+            args[aid]['params']['strategy_name'] = self.name
+        return args
+    
+    def random_decision(self,p=0.01):
+        return np.random.uniform(0,1,1)[0] < p    
     
     # TO DO: bring preprocessing back to life
     def preprocess(self,spot_price,timestamp,Account,RiskManagement,exog=None):
         return exog
     
-    def postprocess(self,decision,args):
+    def postprocess(self,args):
         "Last checks and corrections."
-        args = self.__include_identifiers(args)
-        return decision, args
+        args = self.include_identifiers(args)
+        return args
 
-    def __long_open(self,spot_price,timestamp,Account,exog=None):
-        args = {
-        'type':'market',
-        'size':self.RiskManagement.order_size(Account),
-        'strike_price':spot_price,
-        'stop_loss':0.001,
-        'take_profit':0.001
-        }
-        return self.__random_decision(), args
+    def decide_long_open(self,spot_price,timestamp,Account,exog=None):
+        output = {}
+        for aid in self.on:
+            if aid in spot_price.keys():
+                args = {
+                    'type':'market',
+                    'size':self.RiskManagement.order_size(Account),
+                    'strike_price':spot_price[aid],
+                    'stop_loss':0.001,
+                    'take_profit':0.001
+                }
+                output[aid] = {'decision':self.random_decision(),'params':args}
+        return output
 
-    def __short_open(self,spot_price,timestamp,Account,exog=None):
-        args = {
-        'type':'market',
-        'size':self.RiskManagement.order_size(Account),
-        'strike_price':spot_price,
-        'stop_loss':0.001,
-        'take_profit':0.001
-        }
-        return self.__random_decision(), args
+    def decide_short_open(self,spot_price,timestamp,Account,exog=None):
+        output = {}
+        for aid in self.on:
+            if aid in spot_price.keys():
+                args = {
+                    'type':'market',
+                    'size':self.RiskManagement.order_size(Account),
+                    'strike_price':spot_price[aid],
+                    'stop_loss':0.001,
+                    'take_profit':0.001
+                }
+                output[aid] = {'decision':self.random_decision(),'params':args}
+        return output
     
     # TO DO: check exog variable usage later
     def long_open(self,spot_price,timestamp,Account,exog=None):
-        decision, args = self.__long_open(spot_price=spot_price,
-                                          timestamp=timestamp,
-                                          Account=Account,
-                                          exog=exog)
-        return self.postprocess(decision, args)
+        if exog is not None:
+            exog = self.preprocess() # TO DO: supply correct function arguments
+        args = self.decide_long_open(spot_price=spot_price,
+                                    timestamp=timestamp,
+                                    Account=Account,
+                                    exog=exog)
+        return self.postprocess(args)
     
     def short_open(self,spot_price,timestamp,Account,exog=None):
         if exog is not None:
             exog = self.preprocess() # TO DO: supply correct function arguments
-        decision, args = self.__short_open(spot_price=spot_price,
-                                           Account=Account,
-                                           timestamp=timestamp,
-                                           exog=exog)
-        return self.postprocess(decision, args)
+        args = self.decide_short_open(spot_price=spot_price,
+                                    Account=Account,
+                                    timestamp=timestamp,
+                                    exog=exog)
+        return self.postprocess(args)
     
     def long_modify(self,order,spot_price,Account,exog=None):
         "Set attributes, and check order's state to track the performance."
@@ -80,9 +92,9 @@ class Strategy:
     def long_close(self,order,spot_price,Account,exog=None):
         if order.position != 'long':
             ValueError(f'Position is expected to be long, got {order.position}')
-        return self.__random_decision()
+        return self.random_decision()
 
     def short_close(self,order,spot_price,Account,exog=None):
         if order.position != 'short':
             ValueError(f'Position is expected to be short, got {order.position}')
-        return self.__random_decision()
+        return self.random_decision()

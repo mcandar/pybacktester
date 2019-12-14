@@ -1,14 +1,16 @@
 from datetime import datetime as dt
 
+# TO DO: add an optional expiration date
 class Order:
     """Keep track of an order, set TP, SL levels and store history. One can
     use this class to act on it."""
-    def __init__(self,position,type,size,strike_price,timestamp,spread=0.00010,leverage=100,
+    def __init__(self,asset,position,type,size,strike_price,timestamp,spread=0.00010,leverage=100,
                  stop_loss=None,take_profit=None,trailing_stop_loss=None,
-                 trailing_take_profit=None,strategy_id=None,strategy_name=None):
+                 trailing_take_profit=None,strategy_id=None,strategy_name=None,round_digits=2):
         if type.lower() not in ['market','pending']:
             raise ValueError('Argument `type` must be either `market` or `pending`.')
         
+        self.asset = asset
         self.position = position
         self.type = type
         self.size = size
@@ -20,12 +22,13 @@ class Order:
         self.trailing_stop_loss = trailing_stop_loss
         self.strategy_id = strategy_id
         self.strategy_name = strategy_name
+        self.round_digits = round_digits
 
         self.is_active = True
         self.is_open = self.type != 'pending'
-        self.profit = -spread*size
+        self.profit = round(-spread*size,self.round_digits)
         self.profits = [self.profit]
-        self.margin = strike_price*size*1000
+        self.margin = round(strike_price*size*1000,self.round_digits)
         self.margins = [self.margin]
         self.pips = 0
         self.pipss = [self.pips]
@@ -56,7 +59,7 @@ class Order:
                 return True
         return False
 
-    def check_close(self,spot_price,timestamp):
+    def check_close(self,spot_price,timestamp): # TO DO: check also expiration date
         "Runs at each tick."
         if self.is_active and self.is_open:
             if self.take_profit is not None and self.pips >= self.take_profit:
@@ -75,8 +78,8 @@ class Order:
     
     def __update_basics(self,spot_price):
         pips = spot_price-self.strike_price if self.position == 'long' else self.strike_price-spot_price
-        profit = self.pips*self.size*1000*self.leverage
-        margin = spot_price*self.size*1000 + self.profit
+        profit = round(self.pips*self.size*1000*self.leverage,self.round_digits)
+        margin = round(spot_price*self.size*1000 + self.profit,self.round_digits)
         return pips, profit, margin
     
     def update(self,spot_price,timestamp):

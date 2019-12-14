@@ -3,7 +3,7 @@
 # TO DO: add max number of open orders
 # TO DO: add max allocated margin (or min free margin)
 class Account:
-    def __init__(self,balance=1000,leverage=100,margin_call_level=0.3,name=None,id=None):
+    def __init__(self,balance=1000,leverage=100,margin_call_level=0.3,name=None,id=None,round_digits=2):
         self.__initial_balance = balance
         self.balance = balance
         self.free_margin = balance
@@ -11,9 +11,10 @@ class Account:
         self.margin_call_level = margin_call_level # TO DO: check margin call calculation later
         self.__name = name
         self.__id = id
+        self.round_digits = round_digits
+
         self.equity = 0
         self.is_blown = False
-
         self.__i = 0
         self.active_orders = {}
         self.inactive_orders = {}
@@ -39,6 +40,13 @@ class Account:
     def reset(self):
         self.__init__()
     
+    def cleanup(self):
+        round2 = lambda x: round(x,2)
+        self.balances = list(map(round2,self.balances))
+        self.free_margins = list(map(round2,self.free_margins))
+        self.equities = list(map(round2,self.equities))
+        return self
+    
     def place_order(self,order):
         if self.free_margin >= order.margin:
             self.free_margin -= order.margin
@@ -59,9 +67,9 @@ class Account:
         del self.active_orders[id]
         self.inactive_orders[id] = tmp_order
 
-        self.free_margin += tmp_order.margin
-        self.equity -= tmp_order.margin
-        self.balance += tmp_order.profit
+        self.free_margin += round(tmp_order.margin,self.round_digits)
+        self.equity -= round(tmp_order.margin,self.round_digits)
+        self.balance += round(tmp_order.profit,self.round_digits)
 
         self.n_active_orders -= 1
         self.n_inactive_orders += 1
@@ -83,7 +91,7 @@ class Account:
     def __update_or_close(self,spot_price,timestamp):
         order_close_ids = []
         for id,order in self.active_orders.items():
-            order.update(spot_price,timestamp)
+            order.update(spot_price[order.asset],timestamp) # <------- TO DO: correct balance (and NAV) calculation
             if not order.is_active and not order.is_open: # closed due to TP, SL
                 order_close_ids.append(id)
             elif order.is_active and order.is_open:
