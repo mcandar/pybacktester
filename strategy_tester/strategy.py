@@ -1,7 +1,6 @@
 import numpy as np
 
 # TO DO: create several built-in strategies
-# TO DO: edit this class to be a generic super class (make inheritable)
 # TO DO: use a decorator to simplify methods?
 class Strategy:
     """Open, modify, and close orders. By modification, we could keep a 
@@ -26,7 +25,7 @@ class Strategy:
     def random_decision(self,p=0.01):
         return np.random.uniform(0,1,1)[0] < p    
     
-    def preprocess(self,spot_price,timestamp,Account,RiskManagement,exog=None):
+    def preprocess(self,spot_price,timestamp,Account,RiskManagement,exog):
         "Preprocess exogenous variables."
         return exog
     
@@ -35,6 +34,85 @@ class Strategy:
         args = self.include_identifiers(args)
         return args
 
+    def decide_long_open(self,spot_price,timestamp,Account,exog):
+        output = {}
+        for aid in self.on:
+            if aid in spot_price.keys():
+                args = {
+                    'type':'market',
+                    'size':self.RiskManagement.order_size(Account),
+                    'strike_price':spot_price[aid],
+                    'stop_loss':0.001,
+                    'take_profit':0.001
+                }
+                output[aid] = {'decision':self.random_decision(),'params':args}
+        return output
+
+    def decide_short_open(self,spot_price,timestamp,Account,exog):
+        output = {}
+        for aid in self.on:
+            if aid in spot_price.keys():
+                args = {
+                    'type':'market',
+                    'size':self.RiskManagement.order_size(Account),
+                    'strike_price':spot_price[aid],
+                    'stop_loss':0.001,
+                    'take_profit':0.001
+                }
+                output[aid] = {'decision':self.random_decision(),'params':args}
+        return output
+    
+    def long_open(self,spot_price,timestamp,Account,exog=None):
+        exog = self.preprocess(spot_price,timestamp,Account,self.RiskManagement,exog)
+        args = self.decide_long_open(spot_price=spot_price,
+                                     timestamp=timestamp,
+                                     Account=Account,
+                                     exog=exog)
+        return self.postprocess(args)
+    
+    def short_open(self,spot_price,timestamp,Account,exog=None):
+        exog = self.preprocess(spot_price,timestamp,Account,self.RiskManagement,exog)
+        args = self.decide_short_open(spot_price=spot_price,
+                                      Account=Account,
+                                      timestamp=timestamp,
+                                      exog=exog)
+        return self.postprocess(args)
+    
+    def long_modify(self,order,spot_price,Account,exog=None):
+        "Set attributes, and check order's state to track the performance."
+        return order
+    
+    def short_modify(self,order,spot_price,Account,exog=None):
+        return order
+
+    def decide_long_close(self,order,spot_price,timestamp,Account,exog):
+        return self.random_decision()
+    
+    def decide_short_close(self,order,spot_price,timestamp,Account,exog):
+        return self.random_decision()
+    
+    def long_close(self,order,spot_price,timestamp,Account,exog=None):
+        if order.position != 'long':
+            AttributeError(f'Position is expected to be long, got {order.position}')
+        exog = self.preprocess(spot_price,timestamp,Account,self.RiskManagement,exog)
+        return self.decide_long_close(order=order,
+                                      spot_price=spot_price,
+                                      timestamp=timestamp,
+                                      Account=Account,
+                                      exog=exog)
+
+    def short_close(self,order,spot_price,timestamp,Account,exog=None):
+        if order.position != 'short':
+            AttributeError(f'Position is expected to be short, got {order.position}')
+        exog = self.preprocess(spot_price,timestamp,Account,self.RiskManagement,exog)
+        return self.decide_short_close(order=order,
+                                       spot_price=spot_price,
+                                       timestamp=timestamp,
+                                       Account=Account,
+                                       exog=exog)
+
+
+class TrendFollower(Strategy):
     def decide_long_open(self,spot_price,timestamp,Account,exog=None):
         output = {}
         for aid in self.on:
@@ -62,39 +140,3 @@ class Strategy:
                 }
                 output[aid] = {'decision':self.random_decision(),'params':args}
         return output
-    
-    # TO DO: check exog variable usage later
-    def long_open(self,spot_price,timestamp,Account,exog=None):
-        if exog is not None:
-            exog = self.preprocess(spot_price,timestamp,Account,self.RiskManagement,exog)
-        args = self.decide_long_open(spot_price=spot_price,
-                                    timestamp=timestamp,
-                                    Account=Account,
-                                    exog=exog)
-        return self.postprocess(args)
-    
-    def short_open(self,spot_price,timestamp,Account,exog=None):
-        if exog is not None:
-            exog = self.preprocess(spot_price,timestamp,Account,self.RiskManagement,exog)
-        args = self.decide_short_open(spot_price=spot_price,
-                                    Account=Account,
-                                    timestamp=timestamp,
-                                    exog=exog)
-        return self.postprocess(args)
-    
-    def long_modify(self,order,spot_price,Account,exog=None):
-        "Set attributes, and check order's state to track the performance."
-        return order
-    
-    def short_modify(self,order,spot_price,Account,exog=None):
-        return order
-    
-    def long_close(self,order,spot_price,Account,exog=None):
-        if order.position != 'long':
-            ValueError(f'Position is expected to be long, got {order.position}')
-        return self.random_decision()
-
-    def short_close(self,order,spot_price,Account,exog=None):
-        if order.position != 'short':
-            ValueError(f'Position is expected to be short, got {order.position}')
-        return self.random_decision()

@@ -51,15 +51,17 @@ class BackTest:
     def check_order_open(self,*args,**kwargs):
         return self.__check_long_open(*args,**kwargs).__check_short_open(*args,**kwargs)
     
-    def check_order_close(self,order,spot_price,Strategy,exog=None):
+    def check_order_close(self,order,spot_price,timestamp,Strategy,exog=None):
         if order.position == 'long':
             return Strategy.long_close(order=order,
-                                       spot_price=spot_price[order.asset],
+                                       spot_price=spot_price,
+                                       timestamp=timestamp,
                                        Account=self.Account,
                                        exog=exog)
         elif order.position == 'short':
             return Strategy.short_close(order=order,
-                                        spot_price=spot_price[order.asset],
+                                        spot_price=spot_price,
+                                        timestamp=timestamp,
                                         Account=self.Account,
                                         exog=exog)
     
@@ -118,6 +120,7 @@ class BackTest:
 
                     if self.check_order_close(order=tmp_order,
                                               spot_price=ticker[1],
+                                              timestamp=ticker[0],
                                               Strategy=tmp_strategy,
                                               exog=x):
                         order_close_ids.append(id)
