@@ -5,14 +5,13 @@ from strategy_tester.risk_management import ConstantRate, KellyCriterion
 from strategy_tester.simulate import BackTest
 from strategy_tester.utils import generate_data
 
-eurusd     = EURUSD(generate_data(100000).values)
-account    = Account(balance=1000)
-strategy_1 = Strategy(RiskManagement=ConstantRate(0.05),
-                      id=23030,
-                      name='noise_trader_1')
-strategy_2 = Strategy(RiskManagement=KellyCriterion(n=20),
-                      id=23031,
-                      name='noise_trader_2')
+
+eurusd = EURUSD(generate_data(100000).values)
+account = Account(balance=1000)
+
+strategy_1 = Strategy(RiskManagement=ConstantRate(0.05),id=23030,name='noise_trader_1')
+strategy_2 = Strategy(RiskManagement=KellyCriterion(n=20),id=23031,name='noise_trader_2')
 strategy_1, strategy_2 = eurusd.register(strategy_1,strategy_2)
-sim        = BackTest(account,[strategy_1,strategy_2]).run(eurusd)
+
+sim = BackTest(Account=account,Strategy=[strategy_1,strategy_2]).run(eurusd)
 print(sim.Account.balances)
