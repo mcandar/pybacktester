@@ -26,8 +26,8 @@ class Strategy:
     def random_decision(self,p=0.01):
         return np.random.uniform(0,1,1)[0] < p    
     
-    # TO DO: bring preprocessing back to life
     def preprocess(self,spot_price,timestamp,Account,RiskManagement,exog=None):
+        "Preprocess exogenous variables."
         return exog
     
     def postprocess(self,args):
@@ -66,7 +66,7 @@ class Strategy:
     # TO DO: check exog variable usage later
     def long_open(self,spot_price,timestamp,Account,exog=None):
         if exog is not None:
-            exog = self.preprocess() # TO DO: supply correct function arguments
+            exog = self.preprocess(spot_price,timestamp,Account,self.RiskManagement,exog)
         args = self.decide_long_open(spot_price=spot_price,
                                     timestamp=timestamp,
                                     Account=Account,
@@ -75,7 +75,7 @@ class Strategy:
     
     def short_open(self,spot_price,timestamp,Account,exog=None):
         if exog is not None:
-            exog = self.preprocess() # TO DO: supply correct function arguments
+            exog = self.preprocess(spot_price,timestamp,Account,self.RiskManagement,exog)
         args = self.decide_short_open(spot_price=spot_price,
                                     Account=Account,
                                     timestamp=timestamp,
