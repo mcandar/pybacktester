@@ -1,8 +1,9 @@
 from strategy_tester.utils import generate_id
 
+# TO DO: implement dynamic slippage and spread
 # TO DO: check all class arguments, rearrange, remove redundant arguments
 class Asset:
-    "Base financial instrument class to inherit all common properties."
+    "Base financial instrument class that includes all common properties."
     def __init__(self,data,spread=1e-4,commissions=0,lot_units=1000,type='Main',name='Base'):
         self.data = data
         self.spread = spread

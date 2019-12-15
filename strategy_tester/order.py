@@ -4,13 +4,13 @@ from datetime import datetime as dt
 class Order:
     """Keep track of an order, set TP, SL levels and store history. One can
     use this class to act on it."""
-    def __init__(self,asset,position,type,size,strike_price,timestamp,spread=0.00010,leverage=100,
-                 stop_loss=None,take_profit=None,trailing_stop_loss=None,
-                 trailing_take_profit=None,strategy_id=None,strategy_name=None,round_digits=2):
+    def __init__(self,asset_id,position,type,size,strike_price,timestamp,spread=0.00010,leverage=100,
+                 stop_loss=None,take_profit=None,trailing_stop_loss=None,trailing_take_profit=None,
+                 strategy_id=None,strategy_name=None,round_digits=2,expiration_date=None):
         if type.lower() not in ['market','pending']:
             raise ValueError('Argument `type` must be either `market` or `pending`.')
         
-        self.asset = asset
+        self.asset_id = asset_id
         self.position = position
         self.type = type
         self.size = size
@@ -23,6 +23,7 @@ class Order:
         self.strategy_id = strategy_id
         self.strategy_name = strategy_name
         self.round_digits = round_digits
+        self.expiration_date = expiration_date
 
         self.is_active = True
         self.is_open = self.type != 'pending'

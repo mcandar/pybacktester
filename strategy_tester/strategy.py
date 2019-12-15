@@ -17,9 +17,9 @@ class Strategy:
 
     def include_identifiers(self,args):
         assets = args.keys()
-        for aid in assets:
-            args[aid]['params']['strategy_id'] = self.id
-            args[aid]['params']['strategy_name'] = self.name
+        for asset_id in assets:
+            args[asset_id]['params']['strategy_id'] = self.id
+            args[asset_id]['params']['strategy_name'] = self.name
         return args
     
     def random_decision(self,p=0.01):
@@ -79,30 +79,30 @@ class Strategy:
 
     def decide_long_open(self,spot_price,timestamp,Account,exog):
         output = {}
-        for aid in self.on:
-            if aid in spot_price.keys():
+        for asset_id in self.on:
+            if asset_id in spot_price.keys():
                 args = {
                     'type':'market',
                     'size':self.RiskManagement.order_size(Account),
-                    'strike_price':spot_price[aid],
+                    'strike_price':spot_price[asset_id],
                     'stop_loss':0.001,
                     'take_profit':0.001
                 }
-                output[aid] = {'decision':self.random_decision(),'params':args}
+                output[asset_id] = {'decision':self.random_decision(),'params':args}
         return output
 
     def decide_short_open(self,spot_price,timestamp,Account,exog):
         output = {}
-        for aid in self.on:
-            if aid in spot_price.keys():
+        for asset_id in self.on:
+            if asset_id in spot_price.keys():
                 args = {
                     'type':'market',
                     'size':self.RiskManagement.order_size(Account),
-                    'strike_price':spot_price[aid],
+                    'strike_price':spot_price[asset_id],
                     'stop_loss':0.001,
                     'take_profit':0.001
                 }
-                output[aid] = {'decision':self.random_decision(),'params':args}
+                output[asset_id] = {'decision':self.random_decision(),'params':args}
         return output
 
     def decide_long_close(self,order,spot_price,timestamp,Account,exog):
@@ -116,32 +116,32 @@ class MACross(Strategy):
     def decide_long_open(self,spot_price,timestamp,Account,exog):
         "Exog[0]: Slow MA, Exog[1]: Fast MA"
         output = {}
-        for aid in self.on:
-            if aid in spot_price.keys():
+        for asset_id in self.on:
+            if asset_id in spot_price.keys():
                 args = {
                     'type':'market',
                     'size':self.RiskManagement.order_size(Account),
-                    'strike_price':spot_price[aid],
+                    'strike_price':spot_price[asset_id],
                     'stop_loss':None,
                     'take_profit':None
                 }
-                output[aid] = {'decision':exog[0] > exog[1],
+                output[asset_id] = {'decision':exog[0] > exog[1],
                                'params':args}
         return output
 
     def decide_short_open(self,spot_price,timestamp,Account,exog):
         "Exog[0]: Slow MA, Exog[1]: Fast MA"
         output = {}
-        for aid in self.on:
-            if aid in spot_price.keys():
+        for asset_id in self.on:
+            if asset_id in spot_price.keys():
                 args = {
                     'type':'market',
                     'size':self.RiskManagement.order_size(Account),
-                    'strike_price':spot_price[aid],
+                    'strike_price':spot_price[asset_id],
                     'stop_loss':None,
                     'take_profit':None
                 }
-                output[aid] = {'decision':exog[0] < exog[1],
+                output[asset_id] = {'decision':exog[0] < exog[1],
                                'params':args}
         return output
     

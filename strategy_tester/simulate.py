@@ -30,9 +30,9 @@ class BackTest:
                                     Account=self.Account,
                                     exog=exog)
 
-        for aid, arg in args.items():
+        for asset_id, arg in args.items():
             if arg['decision']:
-                order = Order(asset=aid,position='long',timestamp=timestamp,spread=self.spread,**arg['params'])
+                order = Order(asset_id=asset_id,position='long',timestamp=timestamp,spread=self.spread,**arg['params'])
                 self.Account.place_order(order)
         return self
             
@@ -42,9 +42,9 @@ class BackTest:
                                     Account=self.Account,
                                     exog=exog)
         
-        for aid, arg in args.items():
+        for asset_id, arg in args.items():
             if arg['decision']:
-                order = Order(asset=aid,position='short',timestamp=timestamp,spread=self.spread,**arg['params'])
+                order = Order(asset_id=asset_id,position='short',timestamp=timestamp,spread=self.spread,**arg['params'])
                 self.Account.place_order(order)
         return self
 
@@ -71,8 +71,6 @@ class BackTest:
         elif order.position == 'short':
             return Strategy.short_modify(order=order,spot_price=spot_price,Account=Account,exog=exog)
     
-    # def process_ticker(self,ticker,x):
-    #     pass
 
     # TO DO: divide into multiple functions
     def run(self,assets,exog=None):
