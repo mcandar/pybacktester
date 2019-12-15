@@ -6,4 +6,5 @@ An object oriented backtesting module for evaluating traing strategies for diffe
 
 ## Getting Started
 Head to `pybacktester/examples` and run
-    python single.py
+
+    $ python single.py
