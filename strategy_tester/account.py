@@ -1,5 +1,6 @@
 # TO DO: add NAV
 # TO DO: add balance currency
+# TO DO: add visualization, plotting
 # TO DO: add max number of open orders
 # TO DO: add max allocated margin (or min free margin)
 class Account:

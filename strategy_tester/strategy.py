@@ -31,7 +31,8 @@ class Strategy:
     
     def postprocess(self,args):
         "Last checks and corrections."
-        args = self.include_identifiers(args)
+        if args is not None:
+            args = self.include_identifiers(args)
         return args
     
     def long_open(self,spot_price,timestamp,Account,exog=None):

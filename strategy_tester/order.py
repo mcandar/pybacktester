@@ -49,8 +49,8 @@ class Order:
         self.time_ticker['closed'] = timestamp
         return self
     
-    def pending_open(self,spot_price,timestamp,slippage=0):
-        "Open a pending order."
+    def check_pending_open(self,spot_price,timestamp,slippage=0):
+        "Open a waiting (active) pending order."
         if self.is_active and not self.is_open:
             d = self.strike_price - spot_price
             if (self.position == 'long' and d <= 0) or (self.position == 'short' and d >= 0):
@@ -60,15 +60,18 @@ class Order:
                 return True
         return False
 
-    def check_close(self,spot_price,timestamp): # TO DO: check also expiration date
+    def check_close(self,spot_price,timestamp):
         "Runs at each tick."
-        if self.is_active and self.is_open:
-            if self.take_profit is not None and self.pips >= self.take_profit:
+        if self.is_active:
+            if self.expiration_date is not None and self.expiration_date <= timestamp:
                 self.close(timestamp)
-            elif self.stop_loss is not None and self.pips <= -self.stop_loss:
-                self.close(timestamp)
-            if self.trailing_stop_loss is not None:
-                self.stop_loss -= self.pips + self.stop_loss - self.trailing_stop_loss
+            if self.is_open:
+                if self.take_profit is not None and self.pips >= self.take_profit:
+                    self.close(timestamp)
+                elif self.stop_loss is not None and self.pips <= -self.stop_loss:
+                    self.close(timestamp)
+                if self.trailing_stop_loss is not None:
+                    self.stop_loss -= self.pips + self.stop_loss - self.trailing_stop_loss
         return self
     
     def __append_history(self,pips,profit,margin):
@@ -84,14 +87,14 @@ class Order:
         return pips, profit, margin
     
     def update(self,spot_price,timestamp):
-        "Use at each tick."
+        "Runs at each tick."
         if self.is_active and self.is_open:
             self.pips, self.profit, self.margin = self.__update_basics(spot_price)
             self.__append_history(self.pips,self.profit,self.margin)
             self.check_close(spot_price,timestamp)
             return True
         elif self.is_active and not self.is_open:
-            return self.pending_open(spot_price,timestamp)
+            return self.check_pending_open(spot_price,timestamp)
         else:
             print('Cannot update an expired order.')
             return False
