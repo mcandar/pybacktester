@@ -25,10 +25,10 @@ class CustomAllocation(Strategy):
     
     def filter_stocks(self,past_data,n=5):
         df = pd.DataFrame(past_data)
-        df = df.tail(100)
-        r = df.diff()/df
-        means = r.mean()
-        return means.sort_values()[-n:]
+        df = df.tail(100) # get most 100 of most recent prices
+        r = df.diff()/df # calculate returns
+        means = r.mean() # calculate means
+        return means.sort_values()[-n:] # get top n of them
         
     def decide_long_open(self,spot_price,timestamp,Account,exog):
         output = {}

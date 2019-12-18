@@ -1,3 +1,8 @@
+import sys
+import numpy as np
+import pandas as pd
+sys.path.insert(0,'../')
+
 from strategy_tester.account import Account
 from strategy_tester.asset import EURUSD
 from strategy_tester.strategy import Strategy

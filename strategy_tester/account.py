@@ -1,8 +1,14 @@
-# TO DO: add NAV
-# TO DO: add balance currency
-# TO DO: add visualization, plotting
-# TO DO: add max number of open orders
-# TO DO: add max allocated margin (or min free margin)
+# TODO: add NAV
+# TODO: add balance currency
+# TODO: add visualization, plotting
+# TODO: add describe or summarize method
+# TODO: add start date and and date of simulation
+# TODO: add n_samples, number of processed tickers
+# TODO: add max number of open orders
+# TODO: add warnings
+# TODO: add logging for orders?
+# TODO: add logging for failures?
+# TODO: add max allocated margin (or min free margin)
 class Account:
     def __init__(self,balance=1000,leverage=100,margin_call_level=0.3,name=None,id=None,round_digits=2):
         self.__initial_balance = balance
@@ -41,7 +47,8 @@ class Account:
     def reset(self):
         self.__init__()
     
-    def cleanup(self):
+    def tear_down(self,timestamp):
+        self.close_all_orders(timestamp)
         round2 = lambda x: round(x,2)
         self.balances = list(map(round2,self.balances))
         self.free_margins = list(map(round2,self.free_margins))
@@ -83,6 +90,7 @@ class Account:
         ids = list(self.active_orders.keys()) if ids is None else ids
         for id in ids:
             self.close_order(id=id,timestamp=timestamp)
+        return self
     
     def check_margin_call(self,timestamp):
         if self.free_margin+self.equity <= self.margin_call_level*self.initial_balance:
@@ -92,15 +100,14 @@ class Account:
     def __update_or_close(self,spot_price,timestamp):
         order_close_ids = []
         for id,order in self.active_orders.items():
-            order.update(spot_price[order.asset],timestamp) # <------- TO DO: correct balance (and NAV) calculation
+            order.update(spot_price[order.asset_id],timestamp) # <------- TO DO: correct balance (and NAV) calculation
             if not order.is_active and not order.is_open: # closed due to TP, SL
                 order_close_ids.append(id)
             elif order.is_active and order.is_open:
                 self.equity -= order.margin
                 self.equities.append(self.equity)
         
-        self.close_all_orders(timestamp=timestamp,ids=order_close_ids)
-        return self
+        return self.close_all_orders(timestamp=timestamp,ids=order_close_ids)
     
     def update(self,spot_price,timestamp):
         "Use at each tick."
@@ -111,6 +118,7 @@ class Account:
                 self.check_margin_call(timestamp).__update_or_close(spot_price,timestamp)
 
         return self
+
 
 class ECN(Account):
     def __init__(self):
