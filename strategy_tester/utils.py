@@ -8,7 +8,7 @@ def generate_data(n,start_date='2017-10-21 00:00:00',freq='1min',digits=5):
     start = pd.to_datetime(start_date)
     end = start + (pd.Timedelta(freq)*(price.shape[0]-1))
     ts = pd.date_range(start,end,freq=freq)
-    return pd.DataFrame({'timestamp':ts,'price':price})
+    return pd.DataFrame({'timestamp':ts,'price':price}).values
 
 def dict_product(dicts):
     """

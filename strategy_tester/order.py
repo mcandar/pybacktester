@@ -1,6 +1,5 @@
 from datetime import datetime as dt
 
-# TO DO: add an optional expiration date
 class Order:
     """Keep track of an order, set TP, SL levels and store history. One can
     use this class to act on it."""

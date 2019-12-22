@@ -11,10 +11,10 @@ from strategy_tester.simulate import BackTest
 from strategy_tester.utils import generate_data
 
 
-eurusd = EURUSD(data=generate_data(100000).values)
-gbpusd = GBPUSD(data=generate_data(100000).values)
+eurusd = EURUSD(data=generate_data(100000))
+gbpusd = GBPUSD(data=generate_data(100000))
 
-account = Account(balance=1000)
+account = Account(initial_balance=1000)
 risk_man = ConstantRate(0.1)
 
 strategy_1 = Strategy(RiskManagement=risk_man,id=23030,name='noise_trader')

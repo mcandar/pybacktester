@@ -48,8 +48,6 @@ class CustomAllocation(Strategy):
                                 'type':'market',
                                 'size':self.RiskManagement.order_size(Account),
                                 'strike_price':spot_price[asset_id],
-                                'stop_loss':None,
-                                'take_profit':None
                             }
                             output[asset_id] = {'decision':True,
                                                 'params':args}
@@ -90,8 +88,8 @@ class CustomAllocation(Strategy):
         return False
 
 
-stocks = [Stock(generate_data(10000,freq='1h').values,name=f'stock_{i}',short_name=f'STCK_{i}') for i in range(20)] # randomly generate stock prices
-account = Account(balance=1000) # initialize an account with 1000 USD balance
+stocks = [Stock(generate_data(10000,freq='1h'),name=f'stock_{i}',short_name=f'STCK_{i}') for i in range(20)] # randomly generate stock prices
+account = Account(initial_balance=1000) # initialize an account with 1000 USD balance
 risk_man = ConstantRate(0.05) # constant lot size with 5% of balance each time
 
 strategy = CustomAllocation(RiskManagement=risk_man,id=45450,name='custom_buyer')

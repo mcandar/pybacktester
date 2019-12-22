@@ -20,32 +20,28 @@ class MACross(Strategy):
     def decide_long_open(self,spot_price,timestamp,Account,exog):
         "Exog[0]: Slow MA, Exog[1]: Fast MA"
         output = {}
-        for aid in self.on:
-            if aid in spot_price.keys():
+        for asset_id in self.on:
+            if asset_id in spot_price.keys():
                 args = {
                     'type':'market',
                     'size':self.RiskManagement.order_size(Account),
-                    'strike_price':spot_price[aid],
-                    'stop_loss':None,
-                    'take_profit':None
+                    'strike_price':spot_price[asset_id]
                 }
-                output[aid] = {'decision':exog[0] > exog[1],
+                output[asset_id] = {'decision':exog[0] > exog[1],
                                'params':args}
         return output
 
     def decide_short_open(self,spot_price,timestamp,Account,exog):
         "Exog[0]: Slow MA, Exog[1]: Fast MA"
         output = {}
-        for aid in self.on:
-            if aid in spot_price.keys():
+        for asset_id in self.on:
+            if asset_id in spot_price.keys():
                 args = {
                     'type':'market',
                     'size':self.RiskManagement.order_size(Account),
-                    'strike_price':spot_price[aid],
-                    'stop_loss':None,
-                    'take_profit':None
+                    'strike_price':spot_price[asset_id]
                 }
-                output[aid] = {'decision':exog[0] < exog[1],
+                output[asset_id] = {'decision':exog[0] < exog[1],
                                'params':args}
         return output
     
@@ -56,9 +52,9 @@ class MACross(Strategy):
         return exog[0] > exog[1]
 
 
-aapl = AAPL(generate_data(100000).values)
-account = Account(balance=1000)
-risk_man = ConstantRate(0.05)
+aapl = AAPL(generate_data(100000))
+account = Account(initial_balance=1000)
+risk_man = ConstantRate(0.05,on='free_margin')
 
 strategy = MACross(RiskManagement=risk_man,id=45450,name='ma_cross_trader')
 strategy = aapl.register(strategy)

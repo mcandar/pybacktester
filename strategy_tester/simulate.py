@@ -1,11 +1,10 @@
+from datetime import datetime as dt
 import numpy as np
 from progressbar import ProgressBar
 from strategy_tester.order import Order
 
-# TODO: more than one orders at a time!!!!!!!!
 # TODO: Make also time-driven
 # TODO: Enable parallel computation
-# TODO: bring oninit and ondeinit back to life later
 # TODO: logging for transactions
 # TODO: logging for exceptions
 # TODO: PLOT and Visualizations
@@ -34,7 +33,7 @@ class BackTest:
             for asset_id, arg in args.items():
                 if arg['decision']:
                     order = Order(asset_id=asset_id,position='long',timestamp=timestamp,spread=self.spread,**arg['params'])
-                    self.Account.place_order(order)
+                    self.Account.place_order(order=order,timestamp=timestamp)
         return self
             
     def __check_short_open(self,spot_price,timestamp,Strategy,exog=None):
@@ -47,7 +46,7 @@ class BackTest:
             for asset_id, arg in args.items():
                 if arg['decision']:
                     order = Order(asset_id=asset_id,position='short',timestamp=timestamp,spread=self.spread,**arg['params'])
-                    self.Account.place_order(order)
+                    self.Account.place_order(order=order,timestamp=timestamp)
         return self
 
     def check_order_open(self,*args,**kwargs):
@@ -90,7 +89,20 @@ class BackTest:
         self.num_assets = len(assets)
         self.assets_keymap = {key:val for val,key in enumerate(map(lambda x: x.id,assets))}
     
-    def __run(self,ticker,x):
+    # convert this to a warning
+    def check_intersection(self,data,ts,exog):
+        if self.Account.time_ticker[0]['end'] is not None:
+            for time_ticker in self.Account.time_ticker:
+                if np.any((time_ticker['end'] > ts) | (time_ticker['start'] < ts)):
+                    idx = (ts > time_ticker['end']) | (ts < time_ticker['start'])
+                    data = data[idx]
+                    ts = ts[idx]
+                    exog = exog[idx]
+                    print('Skipping overlapping data.')
+        return data,ts,exog
+
+
+    def __process_ticker(self,ticker,x):
         self.Account.update(spot_price=ticker[1],timestamp=ticker[0])
 
         order_ids = self.Account.active_orders.keys()
@@ -119,14 +131,18 @@ class BackTest:
                                     timestamp=ticker[0],
                                     Strategy=Strategy,
                                     exog=x)
+        return self
 
     def run(self,assets,exog=None):
+        run_start_timestamp = dt.utcnow()
         assets = assets if isinstance(assets,(list,tuple)) else [assets]
         self.initial_checks(assets)
 
         data = np.array([asset.data[:,1] for asset in assets]).T
         ts = assets[0].data[:,0]
         exog = np.repeat(None,data.shape[0]) if exog is None else exog
+
+        data,ts,exog = self.check_intersection(data,ts,exog)
 
         _i = 0
         bar = ProgressBar(maxval = data.shape[0]).start()
@@ -137,11 +153,11 @@ class BackTest:
                 print('No remaining balance.')
                 break
             
-            self.__run(ticker,x)
+            self.__process_ticker(ticker,x)
 
             _i += 1
             bar.update(_i)
-        self.Account.tear_down(timestamp=ticker[0])
+        self.Account.tear_down(first_timestamp=np.min(ts),last_timestamp=np.max(ts),run_start=run_start_timestamp)
         bar.finish()
         return self
 

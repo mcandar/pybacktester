@@ -12,12 +12,14 @@ from strategy_tester.utils import generate_data
 import numpy as np
 
 
-aapl = AAPL(generate_data(100000).values)
-account = Account(balance=1000)
+aapl = AAPL(generate_data(40000))
+account = Account(initial_balance=1000)
 risk_man = ConstantRate(0.05)
 
 strategy = Strategy(RiskManagement=risk_man,id=23030,name='noise_trader')
 strategy = aapl.register(strategy)
 
+print()
 sim = BackTest(Account=account,Strategy=strategy).run(aapl)
-print(sim.Account.balances)
+print(sim.Account.balances[:3])
+print(sim.Account)
