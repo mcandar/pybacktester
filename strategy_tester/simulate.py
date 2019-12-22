@@ -30,10 +30,10 @@ class BackTest:
                                     exog=exog)
 
         if args is not None:
-            for asset_id, arg in args.items():
-                if arg['decision']:
-                    order = Order(asset_id=asset_id,position='long',timestamp=timestamp,spread=self.spread,**arg['params'])
-                    self.Account.place_order(order=order,timestamp=timestamp)
+            # for asset_id, arg in args.items():
+                # if arg['decision']:
+            orders = [Order(asset_id=asset_id,position='long',timestamp=timestamp,spread=self.spread,**arg) for asset_id, arg in args.items()]
+            self.Account.place_order(orders=orders,timestamp=timestamp)
         return self
             
     def __check_short_open(self,spot_price,timestamp,Strategy,exog=None):
@@ -43,10 +43,12 @@ class BackTest:
                                     exog=exog)
         
         if args is not None:
-            for asset_id, arg in args.items():
-                if arg['decision']:
-                    order = Order(asset_id=asset_id,position='short',timestamp=timestamp,spread=self.spread,**arg['params'])
-                    self.Account.place_order(order=order,timestamp=timestamp)
+            # for asset_id, arg in args.items():
+                # if arg['decision']:
+                # order = Order(asset_id=asset_id,position='short',timestamp=timestamp,spread=self.spread,**arg)
+
+            orders = [Order(asset_id=asset_id,position='short',timestamp=timestamp,spread=self.spread,**arg) for asset_id, arg in args.items()]
+            self.Account.place_order(orders=orders,timestamp=timestamp)
         return self
 
     def check_order_open(self,*args,**kwargs):

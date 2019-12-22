@@ -27,8 +27,7 @@ class MACross(Strategy):
                     'size':self.RiskManagement.order_size(Account),
                     'strike_price':spot_price[asset_id]
                 }
-                output[asset_id] = {'decision':exog[0] > exog[1],
-                               'params':args}
+                output[asset_id] = args # {'decision':exog[0] > exog[1],'params':args}
         return output
 
     def decide_short_open(self,spot_price,timestamp,Account,exog):
@@ -41,8 +40,7 @@ class MACross(Strategy):
                     'size':self.RiskManagement.order_size(Account),
                     'strike_price':spot_price[asset_id]
                 }
-                output[asset_id] = {'decision':exog[0] < exog[1],
-                               'params':args}
+                output[asset_id] = args # {'decision':exog[0] < exog[1],'params':args}
         return output
     
     def decide_long_close(self,order,spot_price,timestamp,Account,exog):

@@ -49,8 +49,7 @@ class CustomAllocation(Strategy):
                                 'size':self.RiskManagement.order_size(Account),
                                 'strike_price':spot_price[asset_id],
                             }
-                            output[asset_id] = {'decision':True,
-                                                'params':args}
+                            output[asset_id] = args # {'decision':True,'params':args}
                             self.n_stocks += 1
                 self.last_selected = selected # store currently selected stocks for later comparison
                 del self.past_data[0] # remove first item (roll on a constant size)

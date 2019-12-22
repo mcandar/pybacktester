@@ -18,8 +18,8 @@ class Strategy:
     def include_identifiers(self,args):
         assets = args.keys()
         for asset_id in assets:
-            args[asset_id]['params']['strategy_id'] = self.id
-            args[asset_id]['params']['strategy_name'] = self.name
+            args[asset_id]['strategy_id'] = self.id
+            args[asset_id]['strategy_name'] = self.name
         return args
     
     def random_decision(self,p=0.01):
@@ -89,7 +89,7 @@ class Strategy:
                     'stop_loss':0.001,
                     'take_profit':0.001
                 }
-                output[asset_id] = {'decision':self.random_decision(),'params':args}
+                output[asset_id] = args #{'decision':self.random_decision(),'params':args}
         return output
 
     def decide_short_open(self,spot_price,timestamp,Account,exog):
@@ -103,7 +103,7 @@ class Strategy:
                     'stop_loss':0.001,
                     'take_profit':0.001
                 }
-                output[asset_id] = {'decision':self.random_decision(),'params':args}
+                output[asset_id] = args #{'decision':self.random_decision(),'params':args}
         return output
 
     def decide_long_close(self,order,spot_price,timestamp,Account,exog):
@@ -126,8 +126,7 @@ class MACross(Strategy):
                     'stop_loss':None,
                     'take_profit':None
                 }
-                output[asset_id] = {'decision':exog[0] > exog[1],
-                               'params':args}
+                output[asset_id] = args # {'decision':exog[0] > exog[1],'params':args}
         return output
 
     def decide_short_open(self,spot_price,timestamp,Account,exog):
@@ -142,8 +141,7 @@ class MACross(Strategy):
                     'stop_loss':None,
                     'take_profit':None
                 }
-                output[asset_id] = {'decision':exog[0] < exog[1],
-                               'params':args}
+                output[asset_id] = args # {'decision':exog[0] < exog[1],'params':args}
         return output
     
     def decide_long_close(self,order,spot_price,timestamp,Account,exog):

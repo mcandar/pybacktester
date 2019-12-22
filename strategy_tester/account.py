@@ -74,7 +74,7 @@ class Account:
     def __init__(self,initial_balance=1000,leverage=100,margin_call_level=0.3,name=None,id=None,round_digits=2,max_allowed_risk=None,max_n_orders=None):
         self.__initial_balance = initial_balance
         self.leverage = leverage
-        self.margin_call_level = margin_call_level # TO DO: check margin call calculation later
+        self.margin_call_level = margin_call_level
         self.__name = name
         self.__id = id
         self.round_digits = round_digits
@@ -96,7 +96,7 @@ class Account:
         self.__balances = []
         self.__free_margin = initial_balance
         self.__free_margins = []
-        self.__equity = 0
+        self.__equity = initial_balance
         self.__equities = []
     
     @property
@@ -132,10 +132,7 @@ class Account:
     
     @balance.setter
     def balance(self,value):
-        if value[1] < 0:
-            raise ValueError('balance cannot be less then zero.')
-        self.__balance = value[1]
-        self.balances = value[0], value[1]
+        self.__balance = value
     
     @balance.getter
     def balance(self):
@@ -159,10 +156,7 @@ class Account:
     
     @free_margin.setter
     def free_margin(self,value):
-        if value[1] < 0:
-            raise ValueError('free_margin cannot be less then zero.')
-        self.__free_margin = value[1]
-        self.free_margins = value[0], value[1]
+        self.__free_margin = value
     
     @free_margin.getter
     def free_margin(self):
@@ -186,8 +180,7 @@ class Account:
     
     @equity.setter
     def equity(self,value):
-        self.__equity = value[1]
-        self.equities = value[0], value[1]
+        self.__equity = value
     
     @equity.getter
     def equity(self):
@@ -200,16 +193,25 @@ class Account:
         self.fresh_start = False
         return self
     
-    def place_order(self,order,timestamp):
+    def __append(self,timestamp,balance=None,free_margin=None,equity=None):
+        if balance is not None:
+            self.balances = timestamp, balance
+        if free_margin is not None:
+            self.free_margins = timestamp, free_margin
+        if equity is not None:
+            self.equities = timestamp, equity
+        return self
+    
+    def __place_order(self,order,timestamp):
         if self.free_margin >= order.margin:
             if self.max_allowed_risk is not None:
-                if self.free_margin >= self.balance - self.balance*self.max_allowed_risk:
-                    self.free_margin = timestamp, self.free_margin - order.margin
+                if self.balance - self.free_margin >= self.balance*self.max_allowed_risk:
+                    self.free_margin -= order.margin
                 else:
                     #print('Cannot place order as the risk limit reached.')
                     return self
             else:
-                self.free_margin = timestamp, self.free_margin - order.margin
+                self.free_margin -= order.margin
         else:
             #print('Cannot place order due to insufficient free margin.')
             return self
@@ -220,19 +222,24 @@ class Account:
 
         self.active_orders[f'order_{self.__i}'] = order
         self.__i += 1
-        self.equity = timestamp, self.equity + order.margin
+        self.equity += order.margin
 
         self.n_active_orders += 1
         return self
+
+    def place_order(self,orders,timestamp):
+        for order in orders:
+            self.__place_order(order=order,timestamp=timestamp)
+        return self.__append(timestamp=timestamp,free_margin=self.free_margin,equity=self.equity)
     
-    def close_order(self,id,timestamp):
+    def __close_order(self,id,timestamp):
         tmp_order = self.active_orders[id].close(timestamp)
         del self.active_orders[id]
         self.inactive_orders[id] = tmp_order
 
-        self.free_margin = timestamp, self.free_margin + tmp_order.margin
-        self.equity = timestamp, self.equity - tmp_order.margin
-        self.balance = timestamp, self.balance + tmp_order.profit
+        self.free_margin += tmp_order.margin
+        self.equity += tmp_order.profit
+        self.balance += tmp_order.profit
         self.n_active_orders -= 1
         self.n_inactive_orders += 1
         return self
@@ -240,11 +247,11 @@ class Account:
     def close_all_orders(self,timestamp,ids=None):
         ids = list(self.active_orders.keys()) if ids is None else ids
         for id in ids:
-            self.close_order(id=id,timestamp=timestamp)
-        return self
+            self.__close_order(id=id,timestamp=timestamp)
+        return self.__append(timestamp=timestamp,balance=self.balance,free_margin=self.free_margin,equity=self.equity)
     
     def check_margin_call(self,timestamp):
-        if self.free_margin+self.equity <= self.margin_call_level*self.initial_balance:
+        if self.equity <= self.margin_call_level*self.initial_balance:
             self.close_all_orders(timestamp=timestamp)
         return self
     
@@ -255,7 +262,7 @@ class Account:
             if not order.is_active and not order.is_open: # closed due to TP, SL
                 order_close_ids.append(id)
             elif order.is_active and order.is_open:
-                self.equity = timestamp, self.equity - order.margin
+                self.equity -= order.margin
         
         return self.close_all_orders(timestamp=timestamp,ids=order_close_ids)
     
@@ -269,16 +276,13 @@ class Account:
 
         self.n_processed_tickers += 1
         return self
-    
-    def __past_info(self):
-        return np.array(self.balances), np.array(self.free_margins), np.array(self.equities)
 
     def __pprint(self):
-        bal, fmarg, eqty = self.__past_info()
-        bal = pd.DataFrame(bal[:,1],index=bal[:,0],columns=['balance'])
-        fmarg = pd.DataFrame(fmarg[:,1],index=fmarg[:,0],columns=['free_margin'])
-        eqty = pd.DataFrame(eqty[:,1],index=eqty[:,0],columns=['equity'])
-        return pd.concat([bal,fmarg,eqty],axis=1)
+        bal = pd.Series(self.balances['balance'],index=self.balances['timestamp'])
+        fmarg = pd.Series(self.free_margins['free_margin'],index=self.free_margins['timestamp'])
+        eqty = pd.Series(self.equities['equity'],index=self.equities['timestamp'])
+        output = pd.concat([bal,fmarg,eqty],axis=1,join='outer')
+        return output.ffill()
     
     def __repr__(self):
         if self.n_inactive_orders == 0:
@@ -293,10 +297,10 @@ class Account:
             return self.__pprint().__str__()
     
     def plot_results(self):
-        bal, fmarg, eqty = self.__past_info()
-        plt.plot(bal[:,0],bal[:,1],label='Balance')
-        plt.plot(fmarg[:,0],fmarg[:,1],label='Free Margin')
-        plt.plot(eqty[:,0],eqty[:,1],label='Equity')
+        df = self.__pprint()
+        plt.plot(df['timestamp'],df['balance'],label='Balance')
+        plt.plot(df['timestamp'],df['free_margin'],label='Free Margin')
+        plt.plot(df['timestamp'],df['equity'],label='Equity')
         plt.title(f'Account ({self.name},{self.id}) Results')
         plt.legend()
         plt.show()
