@@ -115,6 +115,8 @@ class Account:
         self.__init__()
     
     def __append(self,timestamp,balance=None,free_margin=None,equity=None):
+        if timestamp == []:
+            raise ValueError('timestamp cannot be an empty list.')
         if balance is not None:
             self.balances.append((timestamp,balance))
         if free_margin is not None:
@@ -145,7 +147,7 @@ class Account:
             return self
         
         if self.max_n_orders is not None and self.n_active_orders > self.max_n_orders:
-            #print('Cannot place order as the number of open order limit reached.')
+            #print('Cannot place order as the number of open orders limit reached.')
             return self
 
         self.active_orders[f'order_{self.__i}'] = order

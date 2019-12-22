@@ -89,7 +89,7 @@ class BackTest:
         self.num_assets = len(assets)
         self.assets_keymap = {key:val for val,key in enumerate(map(lambda x: x.id,assets))}
     
-    # convert this to a warning
+    # TODO: onvert this to a warning
     def check_intersection(self,data,ts,exog):
         if self.Account.time_ticker[0]['end'] is not None:
             for time_ticker in self.Account.time_ticker:
@@ -100,7 +100,6 @@ class BackTest:
                     exog = exog[idx]
                     print('Skipping overlapping data.')
         return data,ts,exog
-
 
     def __process_ticker(self,ticker,x):
         self.Account.update(spot_price=ticker[1],timestamp=ticker[0])
@@ -124,7 +123,7 @@ class BackTest:
                                             exog=x):
                     order_close_ids.append(id)
             
-            self.Account.close_all_orders(order_close_ids)
+            self.Account.close_all_orders(ids=order_close_ids,timestamp=ticker[0])
 
         for Strategy in self.__Strategies.values():
             self.check_order_open(spot_price=ticker[1],
@@ -148,13 +147,10 @@ class BackTest:
         bar = ProgressBar(maxval = data.shape[0]).start()
         for t,d,x in zip(ts.tolist(),data.tolist(),exog):
             ticker = (t,dict(zip(self.assets_keymap.keys(),d)))
-
             if self.Account.is_blown:
                 print('No remaining balance.')
                 break
-            
             self.__process_ticker(ticker,x)
-
             _i += 1
             bar.update(_i)
         self.Account.tear_down(first_timestamp=np.min(ts),last_timestamp=np.max(ts),run_start=run_start_timestamp)

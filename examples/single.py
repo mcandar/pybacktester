@@ -19,7 +19,7 @@ risk_man = ConstantRate(0.05)
 strategy = Strategy(RiskManagement=risk_man,id=23030,name='noise_trader')
 strategy = aapl.register(strategy)
 
-print()
 sim = BackTest(Account=account,Strategy=strategy).run(aapl)
-print(sim.Account.balances[:3])
 print(sim.Account)
+
+sim.Account.plot_results()
