@@ -20,6 +20,6 @@ strategy = Strategy(RiskManagement=risk_man,id=23030,name='noise_trader')
 strategy = aapl.register(strategy)
 
 sim = BackTest(Account=account,Strategy=strategy).run(aapl)
-print(sim.Account)
-
-sim.Account.plot_results()
+print(sim.Account.balances)
+print(sim.Account.free_margins)
+print(sim.Account.equities)
