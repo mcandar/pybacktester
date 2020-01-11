@@ -72,6 +72,8 @@ class Account:
     
     """
     def __init__(self,initial_balance=1000,leverage=100,margin_call_level=0.3,name=None,id=None,round_digits=2,max_allowed_risk=None,max_n_orders=None):
+        if initial_balance < 0:
+            raise ValueError('Argument `initial_balance` cannot be less than zero.')
         self.__initial_balance = initial_balance
         self.leverage = leverage
         self.margin_call_level = margin_call_level
@@ -245,7 +247,12 @@ class Account:
         return self
     
     def close_all_orders(self,timestamp,ids=None):
-        ids = list(self.active_orders.keys()) if ids is None else ids
+        if ids is None:
+            ids = list(self.active_orders.keys())
+        else:
+            if len(ids) == 0:
+                raise ValueError('Argument `ids` cannot be an empty list.')
+
         for id in ids:
             self.__close_order(id=id,timestamp=timestamp)
         return self.__append(timestamp=timestamp,balance=self.balance,free_margin=self.free_margin,equity=self.equity)

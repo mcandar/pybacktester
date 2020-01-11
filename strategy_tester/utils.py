@@ -20,7 +20,13 @@ def dict_product(dicts):
     """
     return (dict(zip(dicts, x)) for x in itertools.product(*dicts.values()))
 
-# TO DO: apply a generic ID convention to all classes
+# TODO: apply a generic ID convention to all classes
 def generate_id(prefix='',suffix='',digits=6,timestamp=True):
     ts = f'TS{int(dt.utcnow().timestamp())}' if timestamp else ''
     return f'{prefix}{random.randint(10**(digits-1),10**digits-1)}{ts}{suffix}'
+
+def ROI(Account):
+    return (Account.balance-Account.initial_balance)/Account.initial_balance
+
+def sharpe_ratio(Account,risk_free_rate=0.05):
+    return (ROI(Account) - risk_free_rate)/Account.balances['balance'].std()

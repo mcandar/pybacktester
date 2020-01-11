@@ -21,6 +21,10 @@ class BackTest:
     Strategy : an instance of Strategy Class
         Designed trading strategy to backtest. This could be an instance
         of any class that inherits Strategy.
+    track : tuple of callable
+        A series of functions to calculate performance metrics. If None,
+        nothing is calculated. All functions specified to this parameter
+        must take `Account` as an argument and return a value.
     """
     def __init__(self,Account,Strategy,spread=0.0002,slippage=0,track=None):
         self.Account = Account
@@ -39,7 +43,7 @@ class BackTest:
                     if not callable(fun):
                         raise ValueError('An element of `track` is not callable.')
         self.track = track
-        self.tracked_results = ()
+        self.tracked_results = []
     
     def __check_long_open(self,spot_price,timestamp,Strategy,exog=None):
         args = Strategy.long_open(spot_price=spot_price,
@@ -137,7 +141,10 @@ class BackTest:
                                             exog=x):
                     order_close_ids.append(id)
             
-            self.Account.close_all_orders(ids=order_close_ids,timestamp=ticker[0])
+            if len(order_close_ids) > 0:
+                self.Account.close_all_orders(ids=order_close_ids,timestamp=ticker[0])
+                if self.track is not None:
+                    self.tracked_results.append(tuple(fun(self.Account) for fun in self.track))
 
         for Strategy in self.__Strategies.values():
             self.check_order_open(spot_price=ticker[1],
@@ -167,7 +174,10 @@ class BackTest:
             self.__process_ticker(ticker,x)
             _i += 1
             bar.update(_i)
+
         self.Account.tear_down(first_timestamp=np.min(ts),last_timestamp=np.max(ts),run_start=run_start_timestamp)
+        if self.track is not None:
+            self.tracked_results.append(tuple(fun(self.Account) for fun in self.track))
         bar.finish()
         return self
 
