@@ -22,12 +22,13 @@ class MACross(Strategy):
         output = {}
         for asset_id in self.on:
             if asset_id in spot_price.keys():
-                args = {
-                    'type':'market',
-                    'size':self.RiskManagement.order_size(Account),
-                    'strike_price':spot_price[asset_id]
-                }
-                output[asset_id] = args # {'decision':exog[0] > exog[1],'params':args}
+                if exog[0] > exog[1]:
+                    args = {
+                        'type':'market',
+                        'size':self.RiskManagement.order_size(Account),
+                        'strike_price':spot_price[asset_id]
+                    }
+                    output[asset_id] = args
         return output
 
     def decide_short_open(self,spot_price,timestamp,Account,exog):
@@ -35,12 +36,13 @@ class MACross(Strategy):
         output = {}
         for asset_id in self.on:
             if asset_id in spot_price.keys():
-                args = {
-                    'type':'market',
-                    'size':self.RiskManagement.order_size(Account),
-                    'strike_price':spot_price[asset_id]
-                }
-                output[asset_id] = args # {'decision':exog[0] < exog[1],'params':args}
+                if exog[0] < exog[1]:
+                    args = {
+                        'type':'market',
+                        'size':self.RiskManagement.order_size(Account),
+                        'strike_price':spot_price[asset_id]
+                    }
+                    output[asset_id] = args
         return output
     
     def decide_long_close(self,order,spot_price,timestamp,Account,exog):

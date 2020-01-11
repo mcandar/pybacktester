@@ -264,7 +264,9 @@ class Account:
             elif order.is_active and order.is_open:
                 self.equity -= order.margin
         
-        return self.close_all_orders(timestamp=timestamp,ids=order_close_ids)
+        if len(order_close_ids) > 0:
+            self.close_all_orders(timestamp=timestamp,ids=order_close_ids)
+        return self
     
     def update(self,spot_price,timestamp):
         "Use at each tick."

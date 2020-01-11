@@ -5,14 +5,24 @@ from strategy_tester.order import Order
 
 # TODO: Make also time-driven
 # TODO: Enable parallel computation
+# TODO: Enable tracking functions, (calculate sharpe ratio, ROI, etc.)
 # TODO: logging for transactions
 # TODO: logging for exceptions
 # TODO: PLOT and Visualizations
-# TODO: calculate sharpe ratio, ROI, etc.
 class BackTest:
-    "Main class to use all components for backtesting."
-    def __init__(self,Account,Strategy,spread=0.0002,slippage=0,oninit=None,
-                 ondeinit=None,preprocess=None,postprocess=None):
+    """
+    Perform simulations on past data. After creating trading strategies, test
+    them on one or more financial assets on an account.
+
+    Parameters
+    ----------
+    Account : an instance of Account Class
+        Configured Account object to simulate a trading account.
+    Strategy : an instance of Strategy Class
+        Designed trading strategy to backtest. This could be an instance
+        of any class that inherits Strategy.
+    """
+    def __init__(self,Account,Strategy,spread=0.0002,slippage=0,track=None):
         self.Account = Account
         self.Strategy = Strategy
         if isinstance(Strategy,(list,tuple)) and len(Strategy) > 0:
@@ -20,8 +30,16 @@ class BackTest:
         else:
             self.__Strategies = {Strategy.id:Strategy}
         self.spread = spread
-        self.oninit = oninit
-        self.ondeinit = ondeinit
+
+        if track is not None:
+            if not isinstance(track,(list,tuple)):
+                raise ValueError('Argument `track` is not iterable.')
+            else:
+                for fun in track:
+                    if not callable(fun):
+                        raise ValueError('An element of `track` is not callable.')
+        self.track = track
+        self.tracked_results = ()
     
     def __check_long_open(self,spot_price,timestamp,Strategy,exog=None):
         args = Strategy.long_open(spot_price=spot_price,
@@ -30,8 +48,6 @@ class BackTest:
                                     exog=exog)
 
         if args is not None:
-            # for asset_id, arg in args.items():
-                # if arg['decision']:
             orders = [Order(asset_id=asset_id,position='long',timestamp=timestamp,spread=self.spread,**arg) for asset_id, arg in args.items()]
             self.Account.place_order(orders=orders,timestamp=timestamp)
         return self
@@ -43,10 +59,6 @@ class BackTest:
                                     exog=exog)
         
         if args is not None:
-            # for asset_id, arg in args.items():
-                # if arg['decision']:
-                # order = Order(asset_id=asset_id,position='short',timestamp=timestamp,spread=self.spread,**arg)
-
             orders = [Order(asset_id=asset_id,position='short',timestamp=timestamp,spread=self.spread,**arg) for asset_id, arg in args.items()]
             self.Account.place_order(orders=orders,timestamp=timestamp)
         return self
@@ -91,7 +103,7 @@ class BackTest:
         self.num_assets = len(assets)
         self.assets_keymap = {key:val for val,key in enumerate(map(lambda x: x.id,assets))}
     
-    # TODO: onvert this to a warning
+    # TODO: convert this to a warning
     def check_intersection(self,data,ts,exog):
         if self.Account.time_ticker[0]['end'] is not None:
             for time_ticker in self.Account.time_ticker:

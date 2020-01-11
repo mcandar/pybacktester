@@ -36,8 +36,8 @@ class Grid(ParamSearch):
         return self
 
 
-# TO DO: check whether we should create the variable params at the initialization
-# TO DO: simplify the code
+# TODO: check whether we should create the variable params at the initialization
+# TODO: simplify the code
 class Random(ParamSearch):
     def __init__(self,q,*args,**kwargs):
         super().__init__(*args,**kwargs)
