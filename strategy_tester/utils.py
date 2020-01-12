@@ -1,4 +1,4 @@
-import itertools, random
+import itertools, logging, random
 from datetime import datetime as dt
 import numpy as np
 import pandas as pd
@@ -29,4 +29,38 @@ def ROI(Account):
     return (Account.balance-Account.initial_balance)/Account.initial_balance
 
 def sharpe_ratio(Account,risk_free_rate=0.05):
-    return (ROI(Account) - risk_free_rate)/Account.balances['balance'].std()
+    sigma = Account.balances['balance'].std()
+    if sigma == 0:
+        return np.nan
+    else:
+        return (ROI(Account) - risk_free_rate)/sigma
+
+def error_logger(level=logging.WARNING):
+    error_log_level = level
+    error_log = logging.getLogger('error_logger')
+    error_log.setLevel(error_log_level)
+    fh = logging.FileHandler('../error.log')
+    fh.setLevel(error_log_level)
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s: %(module)s - %(funcName)s - %(process)d - %(message)s')
+    fh.setFormatter(formatter)
+    error_log.addHandler(fh)
+    return error_log
+
+def transaction_logger(level=logging.WARNING):
+    fh = logging.FileHandler('../transaction.log')
+    fh.setLevel(level)
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s: %(message)s')
+    fh.setFormatter(formatter)
+    
+    TRANSACTION = 20
+    logging.addLevelName(TRANSACTION, 'TRANSACTION')
+
+    def transaction(self, message, *args, **kws):
+        self.log(TRANSACTION, message, *args, **kws)
+    
+    logging.Logger.transaction = transaction
+    transaction_log = logging.getLogger('transaction_log')
+    transaction_log.setLevel(TRANSACTION)
+    transaction_log.addHandler(fh)
+
+    return transaction_log

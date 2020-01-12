@@ -1,4 +1,8 @@
 from datetime import datetime as dt
+from strategy_tester.utils import error_logger, transaction_logger
+
+error_log = error_logger()
+transaction_log = transaction_logger()
 
 class Order:
     """Keep track of an order, set TP, SL levels and store history. One can
@@ -7,6 +11,7 @@ class Order:
                  stop_loss=None,take_profit=None,trailing_stop_loss=None,trailing_take_profit=None,
                  strategy_id=None,strategy_name=None,round_digits=2,expiration_date=None):
         if type.lower() not in ['market','pending']:
+            error_log.error('Argument `type` must be either `market` or `pending`.')
             raise ValueError('Argument `type` must be either `market` or `pending`.')
         
         self.asset_id = asset_id
@@ -56,6 +61,7 @@ class Order:
                 self.is_open = True
                 self.time['opened'] = dt.utcnow()
                 self.time_ticker['opened'] = timestamp
+                transaction_log.transaction('Open a pending (active) order.')
                 return True
         return False
 
@@ -95,5 +101,5 @@ class Order:
         elif self.is_active and not self.is_open:
             return self.check_pending_open(spot_price,timestamp)
         else:
-            print('Cannot update an expired order.')
-            return False
+            error_log.error('Cannot update an expired order.')
+            raise ValueError('Cannot update an expired order.') # <-------- TODO: check if this is the correct error type

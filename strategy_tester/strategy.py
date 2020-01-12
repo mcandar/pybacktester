@@ -23,6 +23,7 @@ class Strategy:
         return args
     
     def random_decision(self,p=0.01):
+        "Bernoulli Process with success rate p."
         return np.random.uniform(0,1,1)[0] < p    
     
     def preprocess(self,spot_price,timestamp,Account,RiskManagement,exog):
@@ -82,28 +83,30 @@ class Strategy:
         output = {}
         for asset_id in self.on:
             if asset_id in spot_price.keys():
-                args = {
-                    'type':'market',
-                    'size':self.RiskManagement.order_size(Account),
-                    'strike_price':spot_price[asset_id],
-                    'stop_loss':0.001,
-                    'take_profit':0.001
-                }
-                output[asset_id] = args #{'decision':self.random_decision(),'params':args}
+                if self.random_decision():
+                    arg = {
+                        'type':'market',
+                        'size':self.RiskManagement.order_size(Account),
+                        'strike_price':spot_price[asset_id],
+                        'stop_loss':0.001,
+                        'take_profit':0.001
+                    }
+                    output[asset_id] = arg
         return output
 
     def decide_short_open(self,spot_price,timestamp,Account,exog):
         output = {}
         for asset_id in self.on:
             if asset_id in spot_price.keys():
-                args = {
-                    'type':'market',
-                    'size':self.RiskManagement.order_size(Account),
-                    'strike_price':spot_price[asset_id],
-                    'stop_loss':0.001,
-                    'take_profit':0.001
-                }
-                output[asset_id] = args #{'decision':self.random_decision(),'params':args}
+                if self.random_decision():
+                    arg = {
+                        'type':'market',
+                        'size':self.RiskManagement.order_size(Account),
+                        'strike_price':spot_price[asset_id],
+                        'stop_loss':0.001,
+                        'take_profit':0.001
+                    }
+                    output[asset_id] = arg
         return output
 
     def decide_long_close(self,order,spot_price,timestamp,Account,exog):

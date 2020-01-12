@@ -3,12 +3,14 @@
 # TODO: add visualization, plotting
 # TODO: add describe or summarize method
 # TODO: write a setter method for balance, free_margin euqity? (to simplify appending each time)
-# TODO: add logging for orders?
-# TODO: add logging for failures?
 from datetime import datetime as dt
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from strategy_tester.utils import error_logger, transaction_logger
+
+error_log = error_logger()
+transaction_log = transaction_logger()
 
 class Account:
     """
@@ -73,6 +75,7 @@ class Account:
     """
     def __init__(self,initial_balance=1000,leverage=100,margin_call_level=0.3,name=None,id=None,round_digits=2,max_allowed_risk=None,max_n_orders=None):
         if initial_balance < 0:
+            error_log.error('Argument `initial_balance` cannot be less than zero.')
             raise ValueError('Argument `initial_balance` cannot be less than zero.')
         self.__initial_balance = initial_balance
         self.leverage = leverage
@@ -89,8 +92,8 @@ class Account:
         self.inactive_orders = {}
         self.n_active_orders = 0
         self.n_inactive_orders = 0
-        self.time = [{'start':None,'end':None}]
-        self.time_ticker = [{'start':None,'end':None}]
+        self.time = []
+        self.time_ticker = []
         self.fresh_start = True
         self.n_processed_tickers = 0
 
@@ -100,6 +103,7 @@ class Account:
         self.__free_margins = []
         self.__equity = initial_balance
         self.__equities = []
+        transaction_log.info('Account is initialized.')
     
     @property
     def initial_balance(self):
@@ -210,16 +214,16 @@ class Account:
                 if self.balance - self.free_margin >= self.balance*self.max_allowed_risk:
                     self.free_margin -= order.margin
                 else:
-                    #print('Cannot place order as the risk limit reached.')
+                    transaction_log.error('Cannot place order as the risk limit reached.')
                     return self
             else:
                 self.free_margin -= order.margin
         else:
-            #print('Cannot place order due to insufficient free margin.')
+            transaction_log.error('Cannot place order due to insufficient free margin.')
             return self
         
         if self.max_n_orders is not None and self.n_active_orders > self.max_n_orders:
-            #print('Cannot place order as the number of open orders limit reached.')
+            transaction_log.error('Cannot place order as the number of open orders limit reached.')
             return self
 
         self.active_orders[f'order_{self.__i}'] = order
@@ -227,6 +231,7 @@ class Account:
         self.equity += order.margin
 
         self.n_active_orders += 1
+        transaction_log.transaction(f'Order {id} is opened.')
         return self
 
     def place_order(self,orders,timestamp):
@@ -244,6 +249,7 @@ class Account:
         self.balance += tmp_order.profit
         self.n_active_orders -= 1
         self.n_inactive_orders += 1
+        transaction_log.transaction(f'Order {id} is closed.')
         return self
     
     def close_all_orders(self,timestamp,ids=None):
@@ -251,6 +257,7 @@ class Account:
             ids = list(self.active_orders.keys())
         else:
             if len(ids) == 0:
+                error_log.error('Argument `ids` cannot be an empty list.')
                 raise ValueError('Argument `ids` cannot be an empty list.')
 
         for id in ids:
@@ -259,13 +266,14 @@ class Account:
     
     def check_margin_call(self,timestamp):
         if self.equity <= self.margin_call_level*self.initial_balance:
+            transaction_log.warning('Stop out due to margin call.')
             self.close_all_orders(timestamp=timestamp)
         return self
     
     def __update_or_close(self,spot_price,timestamp):
         order_close_ids = []
         for id,order in self.active_orders.items():
-            order.update(spot_price[order.asset_id],timestamp) # <------- TODO: correct balance (and NAV) calculation
+            order.update(spot_price[order.asset_id],timestamp)
             if not order.is_active and not order.is_open: # closed due to TP, SL
                 order_close_ids.append(id)
             elif order.is_active and order.is_open:
@@ -276,14 +284,17 @@ class Account:
         return self
     
     def update(self,spot_price,timestamp):
-        "Use at each tick."
+        "Update account at each tick."
         self.is_blown = self.balance <= 0
 
         if not self.is_blown:
             if self.n_active_orders > 0:
                 self.check_margin_call(timestamp).__update_or_close(spot_price,timestamp)
+        else:
+            transaction_log.critical('No remaining balance, account is blown.')
 
         self.n_processed_tickers += 1
+        transaction_log.debug('Account is updated.')
         return self
 
     def __pprint(self):
