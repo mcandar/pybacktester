@@ -31,9 +31,9 @@ class Order:
 
         self.is_active = True
         self.is_open = self.type != 'pending'
-        self.profit = round(-spread*size,self.round_digits)
+        self.profit = -spread*size
         self.profits = [self.profit]
-        self.margin = round(strike_price*size*1000,self.round_digits)
+        self.margin = strike_price*size*1000
         self.margins = [self.margin]
         self.pips = 0
         self.pipss = [self.pips]
@@ -87,8 +87,8 @@ class Order:
     
     def __update_basics(self,spot_price):
         pips = spot_price-self.strike_price if self.position == 'long' else self.strike_price-spot_price
-        profit = round(self.pips*self.size*1000*self.leverage,self.round_digits)
-        margin = round(spot_price*self.size*1000 + self.profit,self.round_digits)
+        profit = self.pips*self.size*1000*self.leverage
+        margin = spot_price*self.size*1000 + self.profit
         return pips, profit, margin
     
     def update(self,spot_price,timestamp):

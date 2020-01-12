@@ -1,7 +1,7 @@
 import numpy as np
 
-# TO DO: create several built-in strategies
-# TO DO: use a decorator to simplify methods?
+# TODO: create several built-in strategies
+# TODO: use a decorator to simplify methods?
 class Strategy:
     """Open, modify, and close orders. By modification, we could keep a 
     number of variables, in order to track its performance and make decisions."""
@@ -88,8 +88,8 @@ class Strategy:
                         'type':'market',
                         'size':self.RiskManagement.order_size(Account),
                         'strike_price':spot_price[asset_id],
-                        'stop_loss':0.001,
-                        'take_profit':0.001
+                        'stop_loss':0.01,
+                        'take_profit':0.01
                     }
                     output[asset_id] = arg
         return output
@@ -103,8 +103,8 @@ class Strategy:
                         'type':'market',
                         'size':self.RiskManagement.order_size(Account),
                         'strike_price':spot_price[asset_id],
-                        'stop_loss':0.001,
-                        'take_profit':0.001
+                        'stop_loss':0.01,
+                        'take_profit':0.01
                     }
                     output[asset_id] = arg
         return output

@@ -239,13 +239,9 @@ class Account:
     def __place_order(self,order,timestamp):
         if self.free_margin >= order.margin:
             if self.max_allowed_risk is not None:
-                if self.balance - self.free_margin >= self.balance*self.max_allowed_risk:
-                    self.free_margin -= order.margin
-                else:
+                if self.balance - self.free_margin < self.balance*self.max_allowed_risk:
                     transaction_log.error('Cannot place order as the risk limit reached.')
                     return self
-            else:
-                self.free_margin -= order.margin
         else:
             transaction_log.error('Cannot place order due to insufficient free margin.')
             return self
@@ -258,6 +254,7 @@ class Account:
         self.__i += 1
         self.equity += order.profit
         self.nav += order.margin
+        self.free_margin -= order.margin
 
         self.n_active_orders += 1
         transaction_log.transaction(f'Order {id} is opened.')
@@ -273,10 +270,10 @@ class Account:
         del self.active_orders[id]
         self.inactive_orders[id] = tmp_order
 
-        self.free_margin += tmp_order.margin
         self.equity += tmp_order.profit
         self.balance += tmp_order.profit
         self.nav -= tmp_order.margin
+        self.free_margin += tmp_order.margin
         self.n_active_orders -= 1
         self.n_inactive_orders += 1
         transaction_log.transaction(f'Order {id} is closed.')
@@ -306,10 +303,7 @@ class Account:
             order.update(spot_price[order.asset_id],timestamp)
             if not order.is_active and not order.is_open: # closed due to TP, SL ### <----------- COULD THIS DELETE PENDING ORDERS???????
                 order_close_ids.append(id)
-            elif order.is_active and order.is_open:
-                pass
-                #self.equity -= order.margin ### <----------- IS THIS CORRECT?????
-        
+
         if len(order_close_ids) > 0:
             self.close_all_orders(timestamp=timestamp,ids=order_close_ids)
         return self

@@ -14,7 +14,7 @@ import numpy as np
 import time
 start = time.time()
 aapl = AAPL(generate_data(100000))
-account = Account(initial_balance=1000,max_allowed_risk=None)
+account = Account(initial_balance=1000,max_allowed_risk=None,max_n_orders=10)
 risk_man = ConstantLots(0.1)
 
 strategy = Strategy(RiskManagement=risk_man,id=23030,name='noise_trader')
@@ -24,6 +24,7 @@ sim = BackTest(Account=account,Strategy=strategy,track=[ROI,sharpe_ratio]).run(a
 print(sim.tracked_results)
 print(sim.Account.balances)
 print(sim.Account.equities)
+print(sim.Account.free_margins)
 print(sim.Account.navs)
 # print(sim.Account.inactive_orders)
 print(sim.Account.n_inactive_orders)

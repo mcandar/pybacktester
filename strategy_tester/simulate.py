@@ -3,12 +3,14 @@ import logging
 import numpy as np
 from progressbar import ProgressBar
 from strategy_tester.order import Order
-from strategy_tester.utils import error_logger
+from strategy_tester.utils import error_logger, transaction_logger
 
 # TODO: Make also time-driven
 # TODO: Enable parallel computation
+# TODO: Implement swap costs
 
 error_log = error_logger()
+transaction_log = transaction_logger()
 
 class BackTest:
     """
@@ -178,7 +180,7 @@ class BackTest:
         for t,d,x in zip(ts.tolist(),data.tolist(),exog):
             ticker = (t,dict(zip(self.assets_keymap.keys(),d)))
             if self.Account.is_blown:
-                print('No remaining balance.')
+                transaction_log.critical('No remaining balance.')
                 break
             self.__process_ticker(ticker,x)
             _i += 1
