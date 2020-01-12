@@ -103,6 +103,8 @@ class Account:
         self.__free_margins = []
         self.__equity = initial_balance
         self.__equities = []
+        self.__nav = 0
+        self.__navs = []
         transaction_log.info('Account is initialized.')
     
     @property
@@ -192,6 +194,30 @@ class Account:
     def equity(self):
         return self.__equity
     
+    @property
+    def navs(self):
+        return pd.DataFrame(self.__navs,columns=['timestamp','nav'])
+    
+    @navs.setter
+    def navs(self,value):
+        self.__navs.append(value)
+    
+    @navs.getter
+    def navs(self):
+        return pd.DataFrame(self.__navs,columns=['timestamp','nav'])
+
+    @property
+    def nav(self):
+        return self.__nav
+    
+    @nav.setter
+    def nav(self,value):
+        self.__equity = value
+    
+    @nav.getter
+    def nav(self):
+        return self.__nav
+    
     def tear_down(self,first_timestamp,last_timestamp,run_start):
         self.time.append({'start':run_start,'end':dt.utcnow()})
         self.time_ticker.append({'start':first_timestamp,'end':last_timestamp})
@@ -199,13 +225,15 @@ class Account:
         self.fresh_start = False
         return self
     
-    def __append(self,timestamp,balance=None,free_margin=None,equity=None):
+    def __append(self,timestamp,balance=None,free_margin=None,equity=None,nav=None):
         if balance is not None:
             self.balances = timestamp, balance
         if free_margin is not None:
             self.free_margins = timestamp, free_margin
         if equity is not None:
             self.equities = timestamp, equity
+        if nav is not None:
+            self.navs = timestamp, nav
         return self
     
     def __place_order(self,order,timestamp):
@@ -228,7 +256,8 @@ class Account:
 
         self.active_orders[f'order_{self.__i}'] = order
         self.__i += 1
-        self.equity += order.margin
+        self.equity += order.profit
+        self.nav += order.margin
 
         self.n_active_orders += 1
         transaction_log.transaction(f'Order {id} is opened.')
@@ -237,7 +266,7 @@ class Account:
     def place_order(self,orders,timestamp):
         for order in orders:
             self.__place_order(order=order,timestamp=timestamp)
-        return self.__append(timestamp=timestamp,free_margin=self.free_margin,equity=self.equity)
+        return self.__append(timestamp=timestamp,free_margin=self.free_margin,equity=self.equity,nav=self.nav)
     
     def __close_order(self,id,timestamp):
         tmp_order = self.active_orders[id].close(timestamp)
@@ -247,6 +276,7 @@ class Account:
         self.free_margin += tmp_order.margin
         self.equity += tmp_order.profit
         self.balance += tmp_order.profit
+        self.nav -= tmp_order.margin
         self.n_active_orders -= 1
         self.n_inactive_orders += 1
         transaction_log.transaction(f'Order {id} is closed.')
@@ -262,7 +292,7 @@ class Account:
 
         for id in ids:
             self.__close_order(id=id,timestamp=timestamp)
-        return self.__append(timestamp=timestamp,balance=self.balance,free_margin=self.free_margin,equity=self.equity)
+        return self.__append(timestamp=timestamp,balance=self.balance,free_margin=self.free_margin,equity=self.equity,nav=self.nav)
     
     def check_margin_call(self,timestamp):
         if self.equity <= self.margin_call_level*self.initial_balance:
@@ -274,10 +304,11 @@ class Account:
         order_close_ids = []
         for id,order in self.active_orders.items():
             order.update(spot_price[order.asset_id],timestamp)
-            if not order.is_active and not order.is_open: # closed due to TP, SL
+            if not order.is_active and not order.is_open: # closed due to TP, SL ### <----------- COULD THIS DELETE PENDING ORDERS???????
                 order_close_ids.append(id)
             elif order.is_active and order.is_open:
-                self.equity -= order.margin
+                pass
+                #self.equity -= order.margin ### <----------- IS THIS CORRECT?????
         
         if len(order_close_ids) > 0:
             self.close_all_orders(timestamp=timestamp,ids=order_close_ids)
