@@ -1,7 +1,9 @@
 from strategy_tester.utils import generate_id
 
+# TODO: implement asset-to-balance currency conversion (assume USD account convert anything to USD) (write inside GETTER-SETTER?, every asset must have USD counterpart)
 # TODO: implement dynamic slippage and spread
 # TODO: implement bid,ask,spread
+# TODO: Implement swap costs
 class Asset:
     "Base financial instrument class that includes all common properties."
     def __init__(self,data,spread=1e-4,commissions=0,lot_units=1000,type='Main',name='Base'):
@@ -29,10 +31,11 @@ class Asset:
 
 class Currency(Asset):
     "Currency class."
-    def __init__(self,data,base,quote,spread=1e-4,commissions=0,lot_units=1000,type='Currency',name='Base',*args,**kwargs):
+    def __init__(self,data,base,quote,spread=1e-4,commissions=0,swap=0,lot_units=1000,type='Currency',name='Base',*args,**kwargs):
         super().__init__(data=data,spread=spread,commissions=commissions,lot_units=lot_units,type=type,name=name,*args,**kwargs)
         self.base = base
         self.quote = quote
+        self.swap = swap
     
 class EURUSD(Currency):
     def __init__(self,*args,**kwargs):

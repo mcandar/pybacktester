@@ -7,7 +7,6 @@ from strategy_tester.utils import error_logger, transaction_logger
 
 # TODO: Make also time-driven
 # TODO: Enable parallel computation
-# TODO: Implement swap costs
 
 error_log = error_logger()
 transaction_log = transaction_logger()
@@ -152,9 +151,6 @@ class BackTest:
             
             if len(order_close_ids) > 0:
                 self.Account.close_all_orders(ids=order_close_ids,timestamp=ticker[0])
-                if self.track is not None:
-                    self.tracked_results.append(tuple(fun(self.Account) for fun in self.track))
-                    error_log.debug('Calculation is completed for the metrics specified for tracking.')
 
         for Strategy in self.__Strategies.values():
             self.check_order_open(spot_price=ticker[1],
@@ -183,6 +179,10 @@ class BackTest:
                 transaction_log.critical('No remaining balance.')
                 break
             self.__process_ticker(ticker,x)
+            if _i % 100 == 0: ## <------------------ adjust this
+                if self.track is not None:
+                    self.tracked_results.append(tuple(fun(self.Account) for fun in self.track))
+                    error_log.debug('Calculation is completed for the metrics specified for tracking.')
             _i += 1
             bar.update(_i)
 

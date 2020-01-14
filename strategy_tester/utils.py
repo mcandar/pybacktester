@@ -3,6 +3,8 @@ from datetime import datetime as dt
 import numpy as np
 import pandas as pd
 
+# TODO: write a strategy class checker (keep it simple, only for necessary method and attributes)
+
 def generate_data(n,start_date='2017-10-21 00:00:00',freq='1min',digits=5):
     price = np.round(np.exp(np.cumsum(np.random.laplace(0,0.02,n))),digits)
     start = pd.to_datetime(start_date)

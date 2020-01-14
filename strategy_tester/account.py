@@ -1,13 +1,10 @@
-# TODO: add NAV
-# TODO: add balance currency
-# TODO: add visualization, plotting
-# TODO: add describe or summarize method
-# TODO: write a setter method for balance, free_margin euqity? (to simplify appending each time)
 from datetime import datetime as dt
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from strategy_tester.utils import error_logger, transaction_logger
+
+# TODO: add balance currency (or change other classes assuming that this will always be USD)
 
 error_log = error_logger()
 transaction_log = transaction_logger()
@@ -19,7 +16,7 @@ class Account:
 
     Parameters
     ----------
-    balance : int, float
+    initial_balance : int, float
         Initial value of the balance.
     leverage : int, float
         Leverage amount of the account for trading.
@@ -38,8 +35,14 @@ class Account:
     
     Attributes
     ----------
-    equity : int, float
+    balance : float
+        Current balance value.
+    free_margin : float
+        Current free margin value.
+    equity : float
         Current equity value.
+    nav : float
+        Current total net asset value.
     is_blown : bool
         True if the current balance is <= 0.
     active_orders : dict of `Order()`
@@ -64,6 +67,8 @@ class Account:
         History of free margin values, recorded at each order update or close.
     equities : list of float
         History of equity values, recorded at each order update or close.
+    navs : list of float
+        History of net asset values, recorded at each order update or close.
     
     See also
     --------
@@ -73,7 +78,8 @@ class Account:
     -----
     
     """
-    def __init__(self,initial_balance=1000,leverage=100,margin_call_level=0.3,name=None,id=None,round_digits=2,max_allowed_risk=None,max_n_orders=None):
+    def __init__(self,initial_balance=1000,leverage=100,margin_call_level=0.3,name=None,
+                 id=None,round_digits=2,max_allowed_risk=None,max_n_orders=None):
         if initial_balance < 0:
             error_log.error('Argument `initial_balance` cannot be less than zero.')
             raise ValueError('Argument `initial_balance` cannot be less than zero.')
@@ -96,6 +102,7 @@ class Account:
         self.time_ticker = []
         self.fresh_start = True
         self.n_processed_tickers = 0
+        self.max_n_active_orders = 0
 
         self.__balance = initial_balance
         self.__balances = []
@@ -188,6 +195,8 @@ class Account:
     
     @equity.setter
     def equity(self,value):
+        if value < 0:
+            raise ValueError('equity cannot be less than zero.')
         self.__equity = value
     
     @equity.getter
@@ -212,7 +221,7 @@ class Account:
     
     @nav.setter
     def nav(self,value):
-        self.__equity = value
+        self.__nav = value
     
     @nav.getter
     def nav(self):
@@ -239,17 +248,15 @@ class Account:
     def __place_order(self,order,timestamp):
         if self.free_margin >= order.margin:
             if self.max_allowed_risk is not None:
-                if self.balance - self.free_margin < self.balance*self.max_allowed_risk:
+                if self.balance - self.free_margin < self.balance*self.max_allowed_risk: ## <------------ check later
                     transaction_log.error('Cannot place order as the risk limit reached.')
                     return self
         else:
             transaction_log.error('Cannot place order due to insufficient free margin.')
             return self
-        
         if self.max_n_orders is not None and self.n_active_orders > self.max_n_orders:
             transaction_log.error('Cannot place order as the number of open orders limit reached.')
             return self
-
         self.active_orders[f'order_{self.__i}'] = order
         self.__i += 1
         self.equity += order.profit
@@ -269,7 +276,6 @@ class Account:
         tmp_order = self.active_orders[id].close(timestamp)
         del self.active_orders[id]
         self.inactive_orders[id] = tmp_order
-
         self.equity += tmp_order.profit
         self.balance += tmp_order.profit
         self.nav -= tmp_order.margin
@@ -286,15 +292,15 @@ class Account:
             if len(ids) == 0:
                 error_log.error('Argument `ids` cannot be an empty list.')
                 raise ValueError('Argument `ids` cannot be an empty list.')
-
         for id in ids:
             self.__close_order(id=id,timestamp=timestamp)
         return self.__append(timestamp=timestamp,balance=self.balance,free_margin=self.free_margin,equity=self.equity,nav=self.nav)
     
     def check_margin_call(self,timestamp):
         if self.equity <= self.margin_call_level*self.initial_balance:
-            transaction_log.warning('Stop out due to margin call.')
-            self.close_all_orders(timestamp=timestamp)
+            if self.n_active_orders > 0:
+                transaction_log.warning('Stop out due to margin call.')
+                self.close_all_orders(timestamp=timestamp)
         return self
     
     def __update_or_close(self,spot_price,timestamp):
@@ -306,6 +312,7 @@ class Account:
 
         if len(order_close_ids) > 0:
             self.close_all_orders(timestamp=timestamp,ids=order_close_ids)
+            
         return self
     
     def update(self,spot_price,timestamp):
@@ -318,6 +325,8 @@ class Account:
         else:
             transaction_log.critical('No remaining balance, account is blown.')
 
+        if self.n_active_orders > self.max_n_active_orders:
+            self.max_n_active_orders = self.n_active_orders
         self.n_processed_tickers += 1
         transaction_log.debug('Account is updated.')
         return self

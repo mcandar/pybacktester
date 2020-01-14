@@ -2,6 +2,7 @@ import numpy as np
 
 # TODO: create several built-in strategies
 # TODO: use a decorator to simplify methods?
+# TODO: SIMPLIFY (for ease of use)
 class Strategy:
     """Open, modify, and close orders. By modification, we could keep a 
     number of variables, in order to track its performance and make decisions."""
@@ -110,10 +111,12 @@ class Strategy:
         return output
 
     def decide_long_close(self,order,spot_price,timestamp,Account,exog):
-        return self.random_decision()
+        #return self.random_decision()
+        return False
     
     def decide_short_close(self,order,spot_price,timestamp,Account,exog):
-        return self.random_decision()
+        #return self.random_decision()
+        return False
 
 
 class MACross(Strategy):
