@@ -7,7 +7,7 @@ transaction_log = transaction_logger()
 class Order:
     """Keep track of an order, set TP, SL levels and store history. One can
     use this class to act on it."""
-    def __init__(self,asset_id,position,type,size,strike_price,timestamp,spread=0.00010,leverage=100,
+    def __init__(self,asset_id,position,type,size,strike_price,timestamp,asset_features,spread=0.00010,leverage=100,
                  stop_loss=None,take_profit=None,trailing_stop_loss=None,trailing_take_profit=None,
                  strategy_id=None,strategy_name=None,round_digits=2,expiration_date=None):
         if type.lower() not in ['market','pending']:
@@ -29,11 +29,13 @@ class Order:
         self.round_digits = round_digits
         self.expiration_date = expiration_date
 
+        self.asset_features = asset_features
+
         self.is_active = True
         self.is_open = self.type != 'pending'
         self.profit = -spread*size
         self.profits = [self.profit]
-        self.margin = strike_price*size*1000
+        self.margin = (strike_price*size*self.asset_features['lot_units'])/leverage # strike_price*size*1000
         self.margins = [self.margin]
         self.pips = 0
         self.pipss = [self.pips]
@@ -87,8 +89,10 @@ class Order:
     
     def __update_basics(self,spot_price):
         pips = spot_price-self.strike_price if self.position == 'long' else self.strike_price-spot_price
-        profit = self.pips*self.size*1000*self.leverage
-        margin = spot_price*self.size*1000 + self.profit
+        # profit = self.pips*self.size*1000*self.leverage
+        # margin = spot_price*self.size*1000 + self.profit
+        profit = self.pips*self.size*self.asset_features['lot_units']*self.leverage
+        margin = spot_price*self.size*self.asset_features['lot_units'] + self.profit
         return pips, profit, margin
     
     def update(self,spot_price,timestamp):

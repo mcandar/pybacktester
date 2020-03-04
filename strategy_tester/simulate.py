@@ -28,7 +28,7 @@ class BackTest:
         nothing is calculated. All functions specified to this parameter
         must take `Account` as an argument and return a value.
     """
-    def __init__(self,Account,Strategy,spread=0.0002,slippage=0,track=None):
+    def __init__(self,Account,Strategy,spread=0.0002,slippage=0,track=None,track_freq=100):
         if isinstance(Strategy,(list,tuple)) and len(Strategy) > 0:
             self.__Strategies = {strategy.id:strategy for strategy in Strategy}
         else:
@@ -48,6 +48,7 @@ class BackTest:
         self.Strategy = Strategy
         self.spread = spread
         self.track = track
+        self.track_freq = track_freq
         self.tracked_results = []
         error_log.info('Simulation is initialized.')
     
@@ -59,7 +60,15 @@ class BackTest:
 
         error_log.debug('Checked long order conditions.')
         if args is not None and len(args) > 0:
-            orders = [Order(asset_id=asset_id,position='long',timestamp=timestamp,spread=self.spread,**arg) for asset_id, arg in args.items()]
+            orders = []
+            for asset_id, arg in args.items():
+                orders.append(Order(asset_id=asset_id,
+                                    position='long',
+                                    timestamp=timestamp,
+                                    spread=self.spread,
+                                    asset_features=self.asset_features[asset_id],
+                                    leverage=self.Account.leverage,
+                                    **arg))
             self.Account.place_order(orders=orders,timestamp=timestamp)
             error_log.info('Placed long orders.')
         return self
@@ -71,7 +80,15 @@ class BackTest:
                                     exog=exog)
         error_log.debug('Checked short order conditions.')
         if args is not None and len(args) > 0:
-            orders = [Order(asset_id=asset_id,position='short',timestamp=timestamp,spread=self.spread,**arg) for asset_id, arg in args.items()]
+            orders = []
+            for asset_id, arg in args.items():
+                orders.append(Order(asset_id=asset_id,
+                                    position='short',
+                                    timestamp=timestamp,
+                                    spread=self.spread,
+                                    asset_features=self.asset_features[asset_id],
+                                    leverage=self.Account.leverage,
+                                    **arg))
             self.Account.place_order(orders=orders,timestamp=timestamp)
             error_log.info('Placed short orders.')
         return self
@@ -100,12 +117,12 @@ class BackTest:
     def order_modify(self,order,Strategy,spot_price,Account,exog=None):
         if order.position == 'long':
             output = Strategy.long_modify(order=order,spot_price=spot_price,Account=Account,exog=exog)
-            error_log.debug('Modified long order.')
-            return output
         elif order.position == 'short':
             output = Strategy.short_modify(order=order,spot_price=spot_price,Account=Account,exog=exog)
-            error_log.debug('Modified short order.')
-            return output
+        else:
+            raise AttributeError(f'Unknown poisition type {order.position}.')
+        error_log.debug(f'Modified {order.position} order.')
+        return output
     
     def initial_checks(self,assets):
         lengths = []
@@ -128,7 +145,7 @@ class BackTest:
         error_log.info('Initial checks are completed.')
 
     def __process_ticker(self,ticker,x):
-        self.Account.update(spot_price=ticker[1],timestamp=ticker[0])
+        self.Account.update(spot_price=ticker[1],timestamp=ticker[0]['timestamp']) # <--------------
 
         order_ids = self.Account.active_orders.keys()
         if self.Account.n_active_orders > 0:
@@ -158,6 +175,13 @@ class BackTest:
                                     Strategy=Strategy,
                                     exog=x)
         return self
+    
+    def track_values(self,t):
+        output = [t]
+        output.extend([fun(self.Account) for fun in self.track])
+        self.tracked_results.append(tuple(output))
+        error_log.debug('Calculation is completed for the metrics specified for tracking.')
+        return True
 
     def run(self,assets,exog=None):
         error_log.info('Simulation run is started.')
@@ -165,32 +189,41 @@ class BackTest:
         assets = assets if isinstance(assets,(list,tuple)) else [assets]
         self.initial_checks(assets)
         error_log.info('Initial checks are passed.')
+        self.asset_features = {asset.id:asset.features() for asset in assets}
 
-        data = np.array([asset.data[:,1] for asset in assets]).T
-        ts = assets[0].data[:,0]
-        exog = np.repeat(None,data.shape[0]) if exog is None else exog
+        # data = np.array([asset.data[:,1] for asset in assets]).T
+        # ts = assets[0].data[:,0]
+        data = [(asset.id,asset.data) for asset in assets]
+        size = len(data[0][1])
+        data = [{aid:dd[i] for aid, dd in data} for i in range(size)] # list of dict of dicts
+        exog = np.repeat(None,len(data)) if exog is None else exog
 
         error_log.info('Starting main loop of simulation.')
         _i = 0
-        bar = ProgressBar(maxval = data.shape[0]).start()
-        for t,d,x in zip(ts.tolist(),data.tolist(),exog):
-            ticker = (t,dict(zip(self.assets_keymap.keys(),d)))
+        bar = ProgressBar(maxval = size).start()
+        # for t,d,x in zip(ts.tolist(),data.tolist(),exog):
+        for tickers,x in zip(data,exog):
+            t = tickers[0]['timestamp']
+            # ticker = (t,dict(zip(self.assets_keymap.keys(),d)))
+
+            ticker = (t,{aid:tickers[i] for aid,i in self.assets_keymap.items()})
+            # ticker = (t,dict(zip(self.assets_keymap.keys(),tickers)))
             if self.Account.is_blown:
                 transaction_log.critical('No remaining balance.')
                 break
+
             self.__process_ticker(ticker,x)
-            if _i % 100 == 0: ## <------------------ adjust this
+            if _i % self.track_freq == 0:
                 if self.track is not None:
-                    self.tracked_results.append(tuple(fun(self.Account) for fun in self.track))
-                    error_log.debug('Calculation is completed for the metrics specified for tracking.')
+                    self.track_values(t)
+
             _i += 1
             bar.update(_i)
 
-        self.Account.tear_down(first_timestamp=np.min(ts),last_timestamp=np.max(ts),run_start=run_start_timestamp)
+        self.Account.tear_down(first_timestamp=data[0][0]['timestamp'],last_timestamp=data[-1][0]['timestamp'],run_start=run_start_timestamp)
         error_log.info('Tear down performed for Account.')
         if self.track is not None:
-            self.tracked_results.append(tuple(fun(self.Account) for fun in self.track))
-            error_log.debug('Calculation completed for the metrics specified for tracking.')
+            self.track_values(t)
         bar.finish()
         return self
 

@@ -91,6 +91,7 @@ class Account:
         self.round_digits = round_digits
         self.max_allowed_risk = max_allowed_risk
         self.max_n_orders = max_n_orders
+        self.currency = 'USD'
 
         self.is_blown = False
         self.__i = 0
@@ -195,8 +196,6 @@ class Account:
     
     @equity.setter
     def equity(self,value):
-        if value < 0:
-            raise ValueError('equity cannot be less than zero.')
         self.__equity = value
     
     @equity.getter
@@ -250,13 +249,13 @@ class Account:
             if self.max_allowed_risk is not None:
                 if self.balance - self.free_margin < self.balance*self.max_allowed_risk: ## <------------ check later
                     transaction_log.error('Cannot place order as the risk limit reached.')
-                    return self
+                    return False
         else:
             transaction_log.error('Cannot place order due to insufficient free margin.')
-            return self
+            return False
         if self.max_n_orders is not None and self.n_active_orders > self.max_n_orders:
             transaction_log.error('Cannot place order as the number of open orders limit reached.')
-            return self
+            return False
         self.active_orders[f'order_{self.__i}'] = order
         self.__i += 1
         self.equity += order.profit
@@ -265,7 +264,7 @@ class Account:
 
         self.n_active_orders += 1
         transaction_log.transaction(f'Order {id} is opened.')
-        return self
+        return True
 
     def place_order(self,orders,timestamp):
         for order in orders:
