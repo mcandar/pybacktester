@@ -52,7 +52,7 @@ class Account:
     inactive_orders : dict of `Order()`
         Dict of past (closed, expired, deleted) orders.
     n_active_orders : int
-        Number of open orders at the moment.
+        Number of open orders at the moment, i.e. positions.
     n_inactive_orders : int
         Number of past (closed, expired, deleted) orders.
     time : list of dict

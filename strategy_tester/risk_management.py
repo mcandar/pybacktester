@@ -21,8 +21,8 @@ class RiskManagement:
             size = self.size_min
         return round(size, self.digits)
 
-    def order_size(self, Account, exog=None):
-        size = self._order_size(Account=Account, exog=exog)
+    def order_size(self, Account, exog=None, *args, **kwargs):
+        size = self._order_size(Account=Account, exog=exog, *args, **kwargs)
         return self.postprocess(size)
 
 

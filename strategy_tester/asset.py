@@ -1,5 +1,7 @@
+import hashlib
 from uuid import uuid4
-from strategy_tester.utils import generate_id
+
+# from strategy_tester.utils import generate_id
 
 # TODO: implement asset-to-account_balance currency conversion (assume USD account convert anything to USD) (write inside GETTER-SETTER?, every asset must have USD counterpart)
 # TODO: implement bid-ask spread (instead of using only price and spread)
@@ -103,7 +105,9 @@ class Asset:
         self.type = type
         self.name = name
         # self.id = generate_id(prefix=self.name, digits=4, timestamp=False)
-        self.id = uuid4()
+        self.id = hashlib.sha1(
+            f"{self.base}{self.quote}".encode("utf-8")
+        ).hexdigest()
         self.registered = []
         self.n_registered = 0
 
@@ -174,7 +178,7 @@ class Currency(Asset):
         type="Currency",
         #        name="Base",
         *args,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             price=price,
@@ -186,7 +190,7 @@ class Currency(Asset):
             quote=quote,
             #            name=name,
             *args,
-            **kwargs
+            **kwargs,
         )
         self.base = base
         self.quote = quote
@@ -204,7 +208,7 @@ class Stock(Asset):
         type="Stock",
         quote="USD",
         *args,
-        **kwargs
+        **kwargs,
     ):
         super().__init__(
             price=price,
@@ -214,7 +218,7 @@ class Stock(Asset):
             type=type,
             quote=quote,
             *args,
-            **kwargs
+            **kwargs,
         )
         self.short_name = base
         self.base = base

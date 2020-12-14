@@ -1,5 +1,6 @@
 import numpy as np
 from uuid import uuid4
+import pickle
 
 # TODO: create several built-in strategies
 # TODO: use a decorator to simplify methods?
@@ -134,6 +135,15 @@ class Strategy:
     def decide_short_close(self, order, tickers, Account, exog):
         # return self.random_decision()
         return False
+
+    def save(self, filename):
+        with open(filename, "wb") as f:
+            pickle.dump(self, f)
+
+    @classmethod
+    def load(cls, filename):
+        with open(filename, "rb") as f:
+            return pickle.load(f)
 
 
 class MACross(Strategy):
