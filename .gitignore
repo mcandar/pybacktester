@@ -1,3 +1,6 @@
 *venv
 *.DS_Store
 *.log
+._*
+*.pyc
+*__pycache__*

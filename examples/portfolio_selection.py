@@ -1,99 +1,143 @@
-import sys
+import os, sys
 import numpy as np
 import pandas as pd
-sys.path.insert(0,'../')
+
+sys.path.insert(0, "../")
 
 from strategy_tester.account import Account
 from strategy_tester.asset import Stock
 from strategy_tester.strategy import Strategy
-from strategy_tester.risk_management import ConstantRate
+from strategy_tester.risk_management import RiskManagement
 from strategy_tester.simulate import BackTest
 from strategy_tester.utils import generate_data
 
 
 class CustomAllocation(Strategy):
-    def __init__(self,n=5,n_samples=60,max_stocks=10,*args,**kwargs):
-        super().__init__(*args,**kwargs)
+    """
+    Monthly-rebalanced, long-only 1 Year's momentum factor investing.
+    """
+
+    def __init__(self, n=20, n_samples=252, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.n = n
         self.n_samples = n_samples
-        self.max_stocks = max_stocks
-        
+
         self.n_stocks = 0
         self.past_data = []
         self.last_selected = None
         self.last_t = 0
-    
-    def filter_stocks(self,past_data,n=5):
-        df = pd.DataFrame(past_data)
-        df = df.tail(100) # get most 100 of most recent prices
-        r = df.diff()/df # calculate returns
-        means = r.mean() # calculate means
-        return means.sort_values()[-n:] # get top n of them
-        
-    def decide_long_open(self,spot_price,timestamp,Account,exog):
-        output = {}
-        t = timestamp
-        if t.hour == 0 and t.minute == 0: # run once a day at 00:00
-            self.past_data.append(spot_price)
-            if len(self.past_data) < self.n_samples: # wait for sufficient number of samples
-                output = None
-            else:
-                selected = self.filter_stocks(self.past_data,self.n) # choose best performing n stocks so far
+        self.last_rebalanced_t = 0
 
-                for asset_id in self.on: # for each stock this strategy is registered to work on
-                    if asset_id in spot_price.keys() and asset_id in selected.index: # if that stock is in the received list of prices and selected for buying
-                        if self.n_stocks < self.max_stocks:
-                            # decide order parameters
-                            args = {
-                                'type':'market',
-                                'size':self.RiskManagement.order_size(Account),
-                                'strike_price':spot_price[asset_id],
-                            }
-                            output[asset_id] = args # {'decision':True,'params':args}
-                            self.n_stocks += 1
-                self.last_selected = selected # store currently selected stocks for later comparison
-                del self.past_data[0] # remove first item (roll on a constant size)
-        else:
-            output = None
+    def momentum_factor(self):
+        """
+        Choose top-n stocks out of the universe based on 1 month's momentum.
+        """
+        return (
+            pd.DataFrame(self.past_data)[self.on]
+            .pct_change()
+            .mean()
+            .sort_values(ascending=False)
+            .head(self.n)
+            .index
+        )
+
+    def decide_long_open(self, tickers, Account, exog):
+        output = {}
+        t = tickers[0].timestamp
+
+        ticker_dict = {ticker.aid: ticker.price for ticker in tickers}
+        self.past_data.append(ticker_dict)
+
+        # run once a month
+        if t.month == self.last_rebalanced_t:
+            return None
+
+        # wait for sufficient number of samples
+        if len(self.past_data) < self.n_samples:
+            return None
+
+        # choose best performing n stocks so far
+        selected_ids = self.momentum_factor()
+
+        for aid in selected_ids:
+            price = ticker_dict[aid]
+
+            # decide order parameters
+            args = {
+                "type": "market",
+                "size": self.RiskManagement.order_size(
+                    Account, n=self.n, price=price
+                ),
+                "strike_price": price,
+            }
+            output[aid] = args
+            self.n_stocks += 1
+
+        # store currently selected stocks for later comparison
+        self.last_selected = selected_ids
+        self.last_rebalanced_t = t.month
+
+        # remove first item (roll on a constant size)
+        del self.past_data[0]
+
         return output
 
-    def decide_short_open(self,spot_price,timestamp,Account,exog):
+    def decide_short_open(self, tickers, Account, exog):
         "No short sells."
         return None
-    
-    def decide_long_close(self,order,spot_price,timestamp,Account,exog):
-        t = timestamp
-        if self.last_t != t:
-            self.last_t = t
-            if t.hour == 0 and t.minute == 0:
-                self.past_data.append(spot_price)
-                if len(self.past_data) < self.n_samples:
-                    return False
-                else:
-                    selected = self.filter_stocks(self.past_data,self.n) # selected for long (that we would have select for buying)
 
-                    self.selected_to_close = []
-                    for stock in self.last_selected.index: # for each last chosen stocks
-                        if stock not in selected.index:
-                            self.selected_to_close.append(stock)
-                    del self.past_data[0]
-                    return order.asset_id in self.selected_to_close # close if the order is selected for close
-            else:
-                return False
+    def decide_long_close(self, order, tickers, Account, exog):
+        t = tickers[0].timestamp
+
+        # if a new month is started, close all positions
+        if t.month != self.last_rebalanced_t:
+            self.n_stocks -= 1
+            return True
         else:
-            return order.asset_id in self.selected_to_close # close if the order is selected for close
-    
-    def decide_short_close(self,order,spot_price,timestamp,Account,exog):
+            return False
+
+    def decide_short_close(self, order, tickers, Account, exog):
         return False
 
 
-stocks = [Stock(generate_data(10000,freq='1h'),name=f'stock_{i}',short_name=f'STCK_{i}') for i in range(20)] # randomly generate stock prices
-account = Account(initial_balance=1000) # initialize an account with 1000 USD balance
-risk_man = ConstantRate(0.05) # constant lot size with 5% of balance each time
+class EqualWeight(RiskManagement):
+    def _order_size(self, Account, exog=None, n=None, price=None):
+        if Account.n_active_orders == 0:
+            self.investable_capital = Account.balance
 
-strategy = CustomAllocation(RiskManagement=risk_man,id=45450,name='custom_buyer')
-for stock in stocks:
-    strategy = stock.register(strategy) # allow strategy to use all of them, either one or multiple
+        return np.floor(self.investable_capital / (n * price)).astype(int)
 
-sim = BackTest(Account=account,Strategy=strategy).run(stocks)
-print(sim.Account.balances)
+
+if __name__ == "__main__":
+    path = "../data/market/"
+
+    stocks = []
+    for symbol in os.listdir(path):
+        print(symbol)
+        tmp = pd.read_csv(os.path.join(path, symbol), parse_dates=True)[
+            ["Adj Close", "Date"]
+        ]
+        tmp.columns = ["close", "timestamp"]
+        tmp["timestamp"] = pd.to_datetime(tmp["timestamp"])
+        tmp = tmp.dropna(how="any", axis=0)
+        if tmp.shape[0] > 252 * 9:
+            stocks.append(Stock(price=tmp.values, base=symbol.strip(".csv")))
+
+    # initialize an account with 1M USD balance
+    account = Account()
+
+    # set equal weights for all stocks
+    risk_man = EqualWeight()
+
+    # initialize the strategy
+    strategy = CustomAllocation(
+        RiskManagement=risk_man, name="momentum_factor"
+    )
+
+    # allow strategy to use all assets
+    for stock in stocks:
+        strategy = stock.register(strategy)
+
+    sim = BackTest(Account=account, Strategy=strategy).run(stocks)
+    sim.Strategy.save("momentum.strt")
+    print(sim.Account.balances)
