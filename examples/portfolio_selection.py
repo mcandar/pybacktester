@@ -14,7 +14,7 @@ from strategy_tester.utils import generate_data
 
 class CustomAllocation(Strategy):
     """
-    Monthly rebalanced custom momentum factor investing.
+    Monthly-rebalanced, long-only 1 Year's momentum factor investing.
     """
 
     def __init__(self, n=20, n_samples=252, *args, **kwargs):
@@ -105,8 +105,7 @@ class EqualWeight(RiskManagement):
         if Account.n_active_orders == 0:
             self.investable_capital = Account.balance
 
-        volume = np.floor(self.investable_capital / (n * price)).astype(int)
-        return volume
+        return np.floor(self.investable_capital / (n * price)).astype(int)
 
 
 if __name__ == "__main__":
@@ -140,5 +139,5 @@ if __name__ == "__main__":
         strategy = stock.register(strategy)
 
     sim = BackTest(Account=account, Strategy=strategy).run(stocks)
+    sim.Strategy.save("momentum.strt")
     print(sim.Account.balances)
-    sim.Strategy.save("momentum")

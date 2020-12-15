@@ -101,11 +101,6 @@ sma[(fast_period - 1) :, 1] = moving_average(d.values, fast_period)
 sim = BackTest(
     Account=account, Strategy=strategy, track=(ROI, sharpe_ratio)
 ).run(aapl, exog=sma)
-# print(sim.tracked_results)
+
 print(sim.Account.balances)
-# print(sim.Account.equities)
-# print(sim.Account.free_margins)
-# print(sim.Account.navs)
-# print(sim.Account.n_inactive_orders)
-# print(sim.Account.max_n_active_orders)
-# print(sim.Account.time)
+sim.Account.plot_results()

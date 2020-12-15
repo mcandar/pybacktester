@@ -27,12 +27,6 @@ def dict_product(dicts):
     return (dict(zip(dicts, x)) for x in itertools.product(*dicts.values()))
 
 
-## TODO: apply a generic ID convention to all classes
-# def generate_id(prefix="", suffix="", digits=6, timestamp=True):
-#    ts = f"TS{int(dt.utcnow().timestamp())}" if timestamp else ""
-#    return f"{prefix}{random.randint(10**(digits-1),10**digits-1)}{ts}{suffix}"
-
-
 def ROI(Account):
     return (
         Account.balance - Account.initial_balance

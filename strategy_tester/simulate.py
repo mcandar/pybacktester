@@ -205,7 +205,6 @@ class BackTest:
                 self.Account.active_orders[oid] = self.order_modify(
                     order=tmp_order,
                     Strategy=tmp_strategy,
-                    # spot_price=ticker[1],
                     tickers=tickers,
                     Account=self.Account,
                     exog=x,
@@ -213,8 +212,6 @@ class BackTest:
 
                 if self.check_order_close(
                     order=tmp_order,
-                    # spot_price=ticker["price"],
-                    # timestamp=ticker["timestamp"],
                     tickers=tickers,
                     Strategy=tmp_strategy,
                     exog=x,
@@ -229,9 +226,6 @@ class BackTest:
         for Strategy in self.__Strategies.values():
             self.check_order_open(
                 Strategy=Strategy,
-                # spot_price=ticker.price,
-                # timestamp=ticker.timestamp,
-                # spread=ticker,
                 tickers=tickers,
                 exog=x,
             )

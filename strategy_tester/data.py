@@ -2,12 +2,14 @@ import pandas as pd
 
 
 class MemoryLoader:
-    pass
+    "Read a file composed of close prices."
+
+    def __init__(self, path):
+        pass
 
 
 class Streamer:
-    pass
+    "Stream a file composed of close prices."
 
-
-class Universe:
-    pass
+    def __init__(self, path):
+        pass

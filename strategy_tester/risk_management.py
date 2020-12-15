@@ -100,9 +100,9 @@ class ConsecutiveResult(RiskManagement):
         pass
 
 
-class EquallyWeighted(RiskManagement):
-    #    def __init__(self):
-    #        pass
+class EqualWeight(RiskManagement):
+    def _order_size(self, Account, exog=None, n=None, price=None):
+        if Account.n_active_orders == 0:
+            self.investable_capital = Account.balance
 
-    def _order_size(self, Account, n, price, exog=None):
-        return np.floor((Account.balance / n) / price)
+        return np.floor(self.investable_capital / (n * price)).astype(int)

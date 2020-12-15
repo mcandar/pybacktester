@@ -129,14 +129,14 @@ class Strategy:
         return output
 
     def decide_long_close(self, order, tickers, Account, exog):
-        # return self.random_decision()
         return False
 
     def decide_short_close(self, order, tickers, Account, exog):
-        # return self.random_decision()
         return False
 
     def save(self, filename):
+        if not filename.endswith(".strt"):
+            filename = f"{filename}.strt"
         with open(filename, "wb") as f:
             pickle.dump(self, f)
 
@@ -159,9 +159,7 @@ class MACross(Strategy):
                     "stop_loss": None,
                     "take_profit": None,
                 }
-                output[
-                    asset_id
-                ] = args  # {'decision':exog[0] > exog[1],'params':args}
+                output[asset_id] = args
         return output
 
     def decide_short_open(self, spot_price, timestamp, Account, exog):
@@ -176,9 +174,7 @@ class MACross(Strategy):
                     "stop_loss": None,
                     "take_profit": None,
                 }
-                output[
-                    asset_id
-                ] = args  # {'decision':exog[0] < exog[1],'params':args}
+                output[asset_id] = args
         return output
 
     def decide_long_close(self, order, spot_price, timestamp, Account, exog):

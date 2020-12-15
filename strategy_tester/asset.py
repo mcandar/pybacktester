@@ -104,7 +104,6 @@ class Asset:
         self.lot_units = lot_units
         self.type = type
         self.name = name
-        # self.id = generate_id(prefix=self.name, digits=4, timestamp=False)
         self.id = hashlib.sha1(
             f"{self.base}{self.quote}".encode("utf-8")
         ).hexdigest()
@@ -135,14 +134,6 @@ class Asset:
 
     def data(self):
         return [
-            # {
-            #    "timestamp": t[0],
-            #    "price": t[1],
-            #    "spread": t[2],
-            #    "commissions": t[3],
-            #    "slippage": t[4],
-            #    "usd_equivalent": t[5],
-            # }
             Ticker(
                 aid=self.id,
                 timestamp=t[0],
@@ -176,7 +167,6 @@ class Currency(Asset):
         swap={"long": 0, "short": 0},
         lot_units=100000,
         type="Currency",
-        #        name="Base",
         *args,
         **kwargs,
     ):
@@ -188,7 +178,6 @@ class Currency(Asset):
             type=type,
             base=base,
             quote=quote,
-            #            name=name,
             *args,
             **kwargs,
         )
@@ -232,8 +221,3 @@ class ETF:
 class Option:
     def __init__(self):
         pass
-
-
-class Market:
-    def __init__(self):
-        self._info = "dummy"

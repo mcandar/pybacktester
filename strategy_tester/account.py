@@ -6,6 +6,7 @@ import pandas as pd
 from strategy_tester.utils import error_logger, transaction_logger
 
 # TODO: add balance currency (or change other classes assuming that this will always be USD)
+# TODO: convert each data frame or series to timestamp-indexed ones.
 
 error_log = error_logger()
 transaction_log = transaction_logger()
@@ -87,10 +88,10 @@ class Account:
         leverage=1,
         margin_call_level=0.3,
         name=None,
-        # id=None,
         round_digits=2,
         max_allowed_risk=None,
         max_n_orders=None,
+        currency="USD",
     ):
         if initial_balance < 0:
             error_log.error(
@@ -107,7 +108,9 @@ class Account:
         self.round_digits = round_digits
         self.max_allowed_risk = max_allowed_risk
         self.max_n_orders = max_n_orders
-        self.currency = "USD"
+        if currency.lower() != "usd":
+            raise NotImplementedError("Only USD accounts are valid.")
+        self.currency = currency
 
         self.is_blown = False
         self.__i = 0
@@ -418,12 +421,3 @@ class Account:
         plt.title(f"Account ({self.name},{self.id}) Results")
         plt.legend()
         plt.show()
-
-
-""" class ECN(Account):
-    def __init__(self):
-        pass
-
-class STP(Account):
-    def __init__(self):
-        pass """
