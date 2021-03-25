@@ -23,7 +23,7 @@ pyrsistent==0.15.6
 pytest==5.3.2
 python-dateutil==2.8.1
 pytz==2019.3
-PyYAML==5.2
+PyYAML==5.4
 ray==0.8.0
 redis==3.3.11
 six==1.13.0
